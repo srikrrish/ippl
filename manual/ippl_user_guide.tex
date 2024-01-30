@@ -14,6 +14,9 @@
 \usepackage{listings}
 \usepackage{graphicx}
 
+\newcommand{\deprecated}[1]{\textcolor{red}{#1}}
+\newcommand{\changed}[1]{\textcolor{green}{#1}}
+
 \lstnewenvironment{code}[1][]
 {\textbf{Code Listing} \hspace{1cm} \hrulefill \lstset{language=C++, basicstyle=\ttfamily\scriptsize}}
 {\hrule\smallskip}
@@ -213,7 +216,7 @@ PAUL SCHERRER INSTITUT
 <h2>(Independent Parallel Particle Layer)</h2>
 <h2>User's Reference Manual</h2>
 <br>
-Andreas Adelmann  
+Andreas Adelmann
 </center>
 \end{rawhtml}
 \end{htmlonly}
@@ -241,13 +244,13 @@ Andreas Adelmann, ..... \vskip 2em
 \end{center}
 \end{latexonly}
 \begin{quotation}
- \ippl (Independent Parallel Particle Layer) is an object-oriented framework for particle based applications in computational science 
-requiring high-performance parallel computers. One of \ippl 's most attractive features is its high performance on both single-processor and  distributed-memory multicomputers machines. As future releases of the library will also support shared-memory multicomputers, \ippl 's authors have had to think very carefully about how to obtain the best possible performance across a wide range of applications on different architectures.
+ \ippl (Independent Parallel Particle Layer) is an object-oriented framework for particle based applications in computational science
+requiring high-performance parallel computers. One of \ippl 's most attractive features is its high performance on both single-processor and  distributed-memory multicomputers machines. \deprecated{As future releases of the library will also support shared-memory multicomputers, \ippl 's authors have had to think very carefully about how to obtain the best possible performance across a wide range of applications on different architectures.}
 \ippl  is a library of C++ classes designed to represent common abstractions in applications where {\em particles, fields} and operators like {\em FFT's} are needed.
 
 Application programmers use and derive from these classes, which present a data-parallel programming interface at the highest abstraction layer.
 
-Lower, to the user (programmer) hidden implementation layers encapsulate distribution and communication of data among processors. The supported platforms are: Linux based Beowulf clusters, Cray XT5/6, SGI Ultrix and the IBM Blue Gene series.
+Lower, to the user (programmer) hidden implementation layers encapsulate distribution and communication of data among processors. \deprecated{The supported platforms are: Linux based Beowulf clusters, Cray XT5/6, SGI Ultrix and the IBM Blue Gene series.}
 
 The main goals of the \ippl  framework includes:
 \begin{itemize}
@@ -255,10 +258,10 @@ The main goals of the \ippl  framework includes:
     \item Development of reusable, cross-problem-domain components to enable rapid application development
     \item High efficiency for kernels and components relevant to scientific simulation
     \item Framework design and development driven by applications from a diverse set of scientific problem domains
-    \item Shorter time from problem inception to working parallel simulations 
+    \item Shorter time from problem inception to working parallel simulations
 \end{itemize}
- \ippl is currently in development the version here is the first "developer release". \ippl is inspired and partially based on POOMA r1 designed and implemented by scientists working at the Los Alamos National Laboratory's Advanced Computing Laboratory. 
- %Although \ippl  has received numerous additions the most importand are: 
+ \ippl is currently in development the version here is the first "developer release". \ippl is inspired and partially based on POOMA r1 designed and implemented by scientists working at the Los Alamos National Laboratory's Advanced Computing Laboratory.
+ %Although \ippl  has received numerous additions the most importand are:
 %Fully ANSI C++ compatible, full 64Bit, HDF5 support and a Trilinos interface.
 
 The report is organized as follow: in chapter 1 an introduction based on examples including installation instructions is presented. Chapter 2 and 3 are describing support classes followed by an discussion

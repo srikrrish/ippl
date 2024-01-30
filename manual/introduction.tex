@@ -1,8 +1,8 @@
 \chapter{Introduction}
 \label{sec:Introduction}
-One of \ippl 's most attractive features is its high performance on both single-processor and distributed-memory multiprocessor machines. As future releases of the library will also support shared-memory machines. 
+One of \ippl 's most attractive features is its high performance on both single-processor and distributed-memory multiprocessor machines. \deprecated{As future releases of the library will also support shared-memory machines.}
 
-The heart of the problem \ippl 's authors face is that while data-parallel programming is a natural way to express many scientific and numerical algorithms, straightforward implementations of it do exactly the wrong thing on modern architectures, whose performance depends critically on the re-use of data loaded into cache. If a program evaluates A+B+C for three arrays A, B, and C by adding A to B, then adding C to that calculation's result, performance suffers both because of the overhead of executing two loops instead of one, but also (and more importantly) because every value in the temporary array that stores the result of A+B has to be accessed twice: once to write it, and once to read it back in. As soon as this array is too large to fit into cache, the program's performance will drop dramatically.
+\deprecated{The heart of the problem \ippl 's authors face is that while data-parallel programming is a natural way to express many scientific and numerical algorithms, straightforward implementations of it do exactly the wrong thing on modern architectures, whose performance depends critically on the re-use of data loaded into cache. If a program evaluates A+B+C for three arrays A, B, and C by adding A to B, then adding C to that calculation's result, performance suffers both because of the overhead of executing two loops instead of one, but also (and more importantly) because every value in the temporary array that stores the result of A+B has to be accessed twice: once to write it, and once to read it back in. As soon as this array is too large to fit into cache, the program's performance will drop dramatically.}
 
 %The first section of this tutorial explains what \ippl  does to solve this problem. Subsequent sections discuss other advanced aspects of \ippl , such as how to build pointwise functions, or reduction functions that will execute efficiently regardless of how arrays are laid out in memory.
 
@@ -17,7 +17,7 @@ The heart of the problem \ippl 's authors face is that while data-parallel progr
 %\ippl 's third and fourth modes of operation are multi-threaded. Each thread in a pool takes iterates from the work queue when and as they become available. Iterates are evaluated independently; the difference between the two modes is that one is synchronous, and blocks after evaluating each data-parallel statement, while the other is asynchronous, i.e. permits out-of-order execution. The table below summarizes these four modes, along with the configuration arguments used to produce each.
 
 
-\section{Example 1 Laplace solver using Jacobi iteration}
+\section{\deprecated{Example 1 Laplace solver using Jacobi iteration}}
 \begin{code}[caption={Laplace solver}]
 #include "Ippl.h"
 int main(int argc, char *argv[])
@@ -27,8 +27,8 @@ int main(int argc, char *argv[])
     const unsigned N=8;
     const unsigned Dim=2;
 
-    Index IGLOBAL(N);  // Specify the global domain 
-    Index JGLOBAL(N); 
+    Index IGLOBAL(N);  // Specify the global domain
+    Index JGLOBAL(N);
 
     Index I(1, N-1); // Specify the interior domain
     Index J(1, N-1);
@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
     assign(A,0.0);  // Assign initial conditions
     assign(b,0.0);
 
-    b[N/2][N/2] = -1.0;  // put a spike on the RHS 
+    b[N/2][N/2] = -1.0;  // put a spike on the RHS
     double fact = 0.25;
 
     // Iterate 200 times
@@ -50,50 +50,50 @@ int main(int argc, char *argv[])
                              A[I-1][J] +
                              A[I][J+1] +
                              A[I][J-1] - b[I][J]));
-    }                                                                                                                                            
+    }
     msg << A << endl;
     return 0;
 }
 \end{code}
 The syntax is very similar to that of Fortran 90: a single assignment fills an entire array with a scalar value, subscripts express ranges as well as single points, and so on. In fact, the combination of C++ and \ippl provides so many of the features of Fortran 90 that one might well ask whether it wouldn't better to just use the latter language straight up. One answer comes down to economics. While the various flavors of Fortran are still used in scientific computing, Fortran's user base is shrinking, particularly in comparison to C++. Networking, graphics, database access, and operating system interfaces are available in C++ programmers long before they're available in Fortran (if they become available at all). What's more, support tools such as debuggers and memory inspectors are primarily targeted at C++ developers, as are hundreds of books, journal articles, and web sites.
 
-Another answer is that the abstraction facilities of C++ are much more powerful that those in Fortran. While Fortran 90 supports an attractive array syntax for floating point arrays one could not, for example, efficiently extend this high level syntax to arrays of vectors or tensors. Until recently, Fortran has had two powerful arguments in its favor: legacy applications, and performance. However, the importance of the former is diminishing as the invention of new algorithms force programmers to rewrite old codes, while the invention of techniques such as {\it expression templates} has made it possible for C++ programs to match, or exceed, the performance of highly-optimized Fortran 77. 
+Another answer is that the abstraction facilities of C++ are much more powerful that those in Fortran. While Fortran 90 supports an attractive array syntax for floating point arrays one could not, for example, efficiently extend this high level syntax to arrays of vectors or tensors. Until recently, Fortran has had two powerful arguments in its favor: legacy applications, and performance. However, the importance of the former is diminishing as the invention of new algorithms force programmers to rewrite old codes, while the invention of techniques such as {\it expression templates} has made it possible for C++ programs to match, or exceed, the performance of highly-optimized Fortran 77.
 %!TEX encoding = UTF-8 Unicode
 
-\section{Example 2 Power Spectrum}
-A sinussoidal field  $\rho(i,j,k) = a_1sin(k_1 \frac{2\pi}{n_x} i) + a_5 sin(k_5 \frac{2\pi}{n_x} i)$, 
+\section{\deprecated{Example 2 Power Spectrum}}
+A sinussoidal field  $\rho(i,j,k) = a_1sin(k_1 \frac{2\pi}{n_x} i) + a_5 sin(k_5 \frac{2\pi}{n_x} i)$,
 $i= 1 \dots n_x, ~ j= 1 \dots n_y, ~ k= 1 \dots n_z $ with $n_x,n_y$ and $n_z$ denoting the grid size is generated and
-the power spectrum calculated. This examples shows how to initialise fields, compute discrete complex-complex FFT and 
+the power spectrum calculated. This examples shows how to initialise fields, compute discrete complex-complex FFT and
 compute the resulting powerspectrum.
 
-Assume a real density field is defined like 
+Assume a real density field is defined like
 \begin{smallcode}
 typedef Field<double,Dim,Mesh_t,Center_t>  Field_t;
 Field_t rho;
 \end{smallcode}
-we then can immediately initialize the field according to the above formula 
+we then can immediately initialize the field according to the above formula
 \begin{smallcode}
-assign(rho[I][J][K], a1*sin(2.0*pi/nr_m[0]*k1*I) + 
+assign(rho[I][J][K], a1*sin(2.0*pi/nr_m[0]*k1*I) +
                      a5*sin(2.0*pi/nr_m[0]*k5*I));
 \end{smallcode}
 Normalizing to $\max(\rho) \le 1.0 $ with
 \begin{smallcode}
 rho /= max(rho)
-\end{smallcode} 
-we then assume to have defined a complex field "fC" and a complex-complex FFT. 
+\end{smallcode}
+we then assume to have defined a complex field "fC" and a complex-complex FFT.
 \begin{smallcode}
 fC = rho;
 fft->transform("forward" , fC);
  \end{smallcode}
 Here we used the in place version of the FFT to obtain $\rho $ in Fourier space. Now
-we can compute the power spectrum: 
-\begin{smallcode}  
+we can compute the power spectrum:
+\begin{smallcode}
 pwrSpec = real(fC*conj(fC));
 \end{smallcode}
 %\pagebreak
 and calculate the 1D pwr-spectrum (in x direction) by integrating over y and z: \\
-\begin{code}  
- NDIndex<3> elem;  
+\begin{code}
+ NDIndex<3> elem;
  for (int i=lDomain[0].min(); i<=(lDomain[0].max()-1)/2; ++i) {
   elem[0]=Index(i,i);
    for (int j=lDomain[1].min(); j<=(lDomain[1].max()-1)/2; ++j) {
@@ -107,24 +107,24 @@ and calculate the 1D pwr-spectrum (in x direction) by integrating over y and z: 
 \end{code}
 The power spectra of the local domain is stored in $f1$. We have to update all other node
 so that each node has the full power spectrum by:
-\begin{smallcode} 
+\begin{smallcode}
 reduce(&(f1[0]),&(f1[0])+f1_lenght,OpAddAssign());
-\end{smallcode} 
+\end{smallcode}
 assuming the non local part of $f1$ is initialized with zero.
 
 %The full code pwrspec-1.cpp is located at $\ippl_ROOT/test/simple.
 
- 
- \section{Example 3 Particle in Cell Code (PIC)}
- This example discusses how to write a 3D Particle in Cell Code (PIC). The 
- complete source file can be found at {\em \$IPPL\_ROOT/test/particles}. The 
+
+ \section{\deprecated{Example 3 Particle in Cell Code (PIC)}}
+ This example discusses how to write a 3D Particle in Cell Code (PIC). The
+ complete source file can be found at {\em \$IPPL\_ROOT/test/particles}. The
  this presentation details are omitted, only the structure and important issues are
- highlighted. 
- \subsection{The {\em ChargedParticles} Class}
+ highlighted.
+ \subsection{\deprecated{The {\em ChargedParticles} Class}}
  The base class {\tt ParticleBase} is augmented with attributes such as charge to mass ration
- {\tt qm}, the vector momenta {\tt P} and the vector holding the electric field {\tt E}. 
+ {\tt qm}, the vector momenta {\tt P} and the vector holding the electric field {\tt E}.
  \begin{code}
- ChargedParticles(PL* pl, Vector_t hr, Vector_t rmin, 
+ ChargedParticles(PL* pl, Vector_t hr, Vector_t rmin,
                   Vector_t rmax, e_dim_tag decomp[Dim]) :
                   ParticleBase<PL>(pl),
                   hr_m(hr),
@@ -148,7 +148,7 @@ assuming the non local part of $f1$ is initialized with zero.
 The arrays {\tt bc\_m} and {\tt vbc\_m} holding the boundary conditions for particles and fields.
 In {\tt decomp\_m} the domain decomposition is stored.
 
-\subsection{The {\em main}}
+\subsection{\deprecated{The {\em main}}}
 
  \begin{code}
 int main(int argc, char *argv[]) {
@@ -173,7 +173,7 @@ int main(int argc, char *argv[]) {
         decomp[d] = (d == serialDim) ? SERIAL : PARALLEL;
     }
 \end{code}
-In the fist part of main, the discrete computational domain ({\tt domain}) and the 
+In the fist part of main, the discrete computational domain ({\tt domain}) and the
 domain decomposition ({\tt decomp}) is constructed. We have choose a 2D domain decomposition
 with $z$ serial i.e. not parallelized. \\
 \begin{code}
@@ -186,7 +186,7 @@ with $z$ serial i.e. not parallelized. \\
     Vector_t rmax(nr);
 
     partBunch=new ChargedParticles<playout_t>(PL,hr,rmin,rmax,decomp);
-\end{code} 
+\end{code}
  Here we construct the {\tt mesh} the field layout ({\tt FL}), describing how the fields are distributed
   and finally the particle layout {\tt PL}. The latter is the used as a template argument to construct the
   particle container. For this example the mesh size is set to unity and the computational domain is
@@ -201,10 +201,10 @@ with $z$ serial i.e. not parallelized. \\
     }
 
     partBunch->qm =  1.0/totalP;
-    partBunch->myUpdate(); 
+    partBunch->myUpdate();
     partBunch->initFields();
-\end{code} 
-  Now each node created {\tt nloc} particles and initialized the coordinates randomly in the 
+\end{code}
+  Now each node created {\tt nloc} particles and initialized the coordinates randomly in the
   computational domain.  A fixed charge to mass ration is assigned. The \texttt{myUpdate()} moves
   all particles to their node defined by the domain decomposition and initialized the fields. In the last
   call the fields gets initialized with the sinusoidal electric field.
@@ -222,11 +222,11 @@ with $z$ serial i.e. not parallelized. \\
 \end{code}
 The last part of main consists of a simple integration scheme to advance the particles. The call
 {\tt gather} interpolates the electric field at the particle position form the nearby grid points by a second
-order {\it cloud in cell} (CIC) interpolation scheme. 
- 
- 
-\subsection{{\em initFields}}
- 
+order {\it cloud in cell} (CIC) interpolation scheme.
+
+
+\subsection{\deprecated{{\em initFields}}}
+
 \begin{code}
 void initFields() {
 
@@ -237,13 +237,13 @@ void initFields() {
 
     int nx = nr_m[0]; int ny = nr_m[1]; int nz = nr_m[2];
 
-    double phi0 = 0.1*nx;            
+    double phi0 = 0.1*nx;
 
     Index I(nx), J(ny), K(nz);
 
-    assign(EFD_m[I][J][K](0), 
-            -2.0*pi*phi0/nx * 
-            cos(2.0*pi*(I+0.5)/nx) * 
+    assign(EFD_m[I][J][K](0),
+            -2.0*pi*phi0/nx *
+            cos(2.0*pi*(I+0.5)/nx) *
             cos(4.0*pi*(J+0.5)/ny) * cos(pi*(K+0.5)/nz));
 
     assign(EFD_m[I][J][K](1),  ..... ;
@@ -257,8 +257,8 @@ void initFields() {
 }
 \end{code}
 
-\subsection{{\em myUpdate}}
- 
+\subsection{\deprecated{{\em myUpdate}}}
+
  \begin{code}
 void myUpdate() {
 
@@ -269,27 +269,27 @@ void myUpdate() {
          EFD_m.initialize(getMesh(), getFieldLayout(), GuardCellSizes<Dim>(1), vbc_m);
          EFDMag_m.initialize(getMesh(), getFieldLayout(), GuardCellSizes<Dim>(1), bc_m);
     }
-    this->update();  
+    this->update();
 }
 \end{code}
- 
-  \subsection{{\em gather}}
- 
+
+  \subsection{\deprecated{{\em gather}}}
+
 \begin{code}
-void gather() {	
+void gather() {
     IntCIC myinterp;
     E.gather(EFD_m, this->R, myinterp);
 }
 \end{code}
- 
-\section{Installation}
+
+\section{\deprecated{Installation}}
  \ippl uses the {\em cmake } build philosophy.  The following environment variables must be set
 \begin{verbatim}
 IPPL_ROOT
-\end{verbatim} 
+\end{verbatim}
 defining where \ippl is installed.
 
-\subsection{Building \ippl}
+\subsection{\deprecated{Building \ippl}}
 \begin{verbatim}
 cd $IPPL_ROOT
 CXX=mpicxx F77=gfortran cmake -DCMAKE_VERBOSE_MAKEFILE=OFF
@@ -297,7 +297,7 @@ CXX=mpicxx F77=gfortran cmake -DCMAKE_VERBOSE_MAKEFILE=OFF
 \end{verbatim}
 
 
-\subsection{Used Compilers and Libraries}
+\subsection{\deprecated{Used Compilers and Libraries}}
 The supported operating systems and libraries are listed in Table \ref{tab:archlib}.
 \begin{table}[h]
   \caption{Supported Architectures and needed Libraries}
@@ -319,18 +319,18 @@ The supported operating systems and libraries are listed in Table \ref{tab:archl
 
 
 \clearpage
-\section{Acknowledgements}
-The contributions of various individuals and groups are acknowledged in the relevant chapters, 
-however a few individuals have or had considerable influence on the 
+\section{\deprecated{Acknowledgements}}
+The contributions of various individuals and groups are acknowledged in the relevant chapters,
+however a few individuals have or had considerable influence on the
 development, Julian Cummings, Yves Ineichen and Jakob Progsch.
 Misprints and obscurity are almost inevitable in a document of this size.
 Comments and {\em active contributions}  from readers are therefore most welcome.
 They may also be sent to \htmladdnormallink{\texttt{andreas.adelmann@psi.ch}}{mailto:andreas.adelmann@psi.ch}.
 
-\subsection{Citation}
+\subsection{\deprecated{Citation}}
 Please cite \ippl in the following way:
 \begin{small}
-\begin{verbatim} 
+\begin{verbatim}
 @techreport{ippl-User-Guide,
 title = "{The IPPL (Independent Parallel Particle Layer)
               Framework }",

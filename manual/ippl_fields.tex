@@ -19,9 +19,9 @@ The \texttt{T} parameter represents the type of data that can be stored inside o
 the \texttt{Field} class supports the intrinsic types \texttt{bool, int, float, double}. One may use any
 user-defined type or class as the template parameter; however, one must also add traits to the
 framework to implement the desired data-parallel promotion properties so that \texttt{Field} operations
-work. The framework includes 
+work. The framework includes
 \begin{smallcode}
-Vektor<Dim, T>, Tenzor<Dim , T>, SymTenzor<Dim, T> 
+Vektor<Dim, T>, Tenzor<Dim , T>, SymTenzor<Dim, T>
 \end{smallcode}
 classes\footnote{The strange spellings avoid conflicts with other classes such as the STL vector class.}
 , which are (mathematical) vectors, tensors, and symmetric tensors whose
@@ -33,15 +33,15 @@ The \texttt{Mesh} parameter represents the mesh on which the field is discretize
 pre-defines two appropriate classes (\texttt{Cartesian} and \texttt{UniformCartesian}) to use for this
 parameter, one of which serves as the default value of the \texttt{Field} ``Mesh'' template parameter:
 \texttt{UniformCartesian<Dim, double>}. Refer to the \ippl User Refercnce for details on the
-\texttt{UniformCartesian} class; basically, it represents a \texttt{Cartesian} mesh with uniform grid spacings. 
+\texttt{UniformCartesian} class; basically, it represents a \texttt{Cartesian} mesh with uniform grid spacings.
 The \texttt{Cartesian} class represents a cartesian mesh with nonuniform grid spacings. NB.:
 the type parameter \texttt{MFLOAT} for \texttt{Cartesian} represents only the data type used to store internal
 information like mesh spacing values; if \texttt{double} satisfies the user, he need not specify it.
 
 The \texttt{Centering} parameter represents the centering of the field on its mesh. \ippl
-pre-defines \texttt{Cell} and \texttt{Vert} classes to represent cell and vertex centering, and has implementations 
+pre-defines \texttt{Cell} and \texttt{Vert} classes to represent cell and vertex centering, and has implementations
 of appropriate mechanisms for \texttt{Cartesian} and other classes which use them. \ippl
-also predefines a \texttt{CartesianCentering} class to represent more general centerings--combinations 
+also predefines a \texttt{CartesianCentering} class to represent more general centerings--combinations
 of vertex and cell centering direction-by-direction and component-by-component for
 \texttt{Field}s with multicomponent element types such as \texttt{Vektor}. Finally, \ippl predefines a
 wrapper class \texttt{CommonCartesianCenterings} with typedef’s several common special
@@ -81,7 +81,7 @@ FieldLayout<3> layout(I,J,K);
 Field<double, 3> A(layout);
 \end{smallcode}
 
-You may also construct \texttt{Field} via copy constructor, wherein a \texttt{Field} is copied into another \texttt{Field}. This results in an element-by-element copy of the data: 
+You may also construct \texttt{Field} via copy constructor, wherein a \texttt{Field} is copied into another \texttt{Field}. This results in an element-by-element copy of the data:
 \begin{smallcode}
 // assuming we have constructed a 2D Field of doubles in A
 A = 2.0;
@@ -138,7 +138,7 @@ represents $[2,8]$.
 
 \section{The \texttt{NDIndex} Class}
 
-The \texttt{NDIndex} class is primarily a container which holds \texttt{N} \texttt{Index} objects. It is templated on the spatial dimension \texttt{N}, and the constructor takes \texttt{N} \texttt{Index} arguments. For example: 
+The \texttt{NDIndex} class is primarily a container which holds \texttt{N} \texttt{Index} objects. It is templated on the spatial dimension \texttt{N}, and the constructor takes \texttt{N} \texttt{Index} arguments. For example:
 \begin{smallcode}
 Index I(5), J(9), K(4);
 NDIndex<3> Domain(I, J, K);
@@ -163,7 +163,7 @@ Index I(5), J(9), K(4);
 FieldLayout<3> Layout(I, J, K);
 \end{smallcode}
 
-\subsection{Specifying Serial or Parallel Layout}
+\subsection{\changed{Specifying Serial or Parallel Layout}}
 
 By default, a \texttt{FieldLayout} object will partition all \texttt{N} dimensions in a parallel fashion. For example a 2D \texttt{Field} with indices running from $0 \ldots 5$ in each dimension, created with a \texttt{FieldLayout} specified as follows:
 \begin{smallcode}
@@ -220,7 +220,7 @@ They represent boundary conditions for a single dimension of a (possibly) multid
 \texttt{UniformCartesian} and \texttt{Cell}. As a
 further refinement, you may specify boundary conditions for individual components of multicomponent \texttt{Field} elements such as \texttt{Vektor}.
 
-\subsection{Using Boundary Conditions With \texttt{Field}s}
+\subsection{\changed{Using Boundary Conditions With \texttt{Field}s}}
 
 The \texttt{BConds} class is a container for the individual specialized boundary conditions; this is the argument passed to the \texttt{Field} constructor. A \texttt{BConds} object acts very much like an array of boundary conditions: when first created, the \texttt{BConds} object is empty, and you add new boundary condition objects to it by treating it as a vector and assigning to its elements. The basic procedure is to construct a \texttt{BConds} object, then construct new or use existing boundary condition objects (from the list
 above) to fill it, as illustrated in this example: \\
@@ -244,20 +244,20 @@ of how the various boundary conditions affect \texttt{Field} operations.
 If a \texttt{Field} is constructed with no \texttt{BConds} object specified, the default is for that \texttt{Field} to have NO boundary conditions. In that case, the boundary conditions container within the \texttt{Field} is empty. It is possible to add additional boundary conditions for a specific face to a \texttt{Field} after it has been constructed; to do so, retrieve the boundary condition container from the \texttt{Field} using the method \texttt{Field::getBConds()}, and then add new face-specific boundary conditions to the returned
 \texttt{BConds} container object as shown in the previous example.
 
-\section{The \texttt{GuardCellSizes} Class}
+\section{\deprecated{The \texttt{GuardCellSizes} Class}}
 
 A \texttt{GuardCellSizes} class, an optional argument to the \texttt{Field} constructor, represents the maximum separation (in elements) of \texttt{Field} elements which will be combined in \texttt{Field} expressions. Typically, this reflects the order of finite differencing in stencil operations. The primary reason for guard cells is parallelism -- a \texttt{Field} domain-decomposed into multiple subdomains with data from adjacent subdomains, so that the stencil operations
 have all required data locally. The \texttt{GuardCellSizes}
 class is parameterized on the unsigned value \texttt{Dim}, which represents the number of dimensions of the \texttt{Field} object. This \texttt{Dim} value must match the corresponding parameter value of the \texttt{Field} object.
 
-The constructor for \texttt{GuardCellSizes} takes either one or two arguments, which are either \texttt{unsigned} or \texttt{unsigned*}. The one-argument forms specify the same number of guard layers for all dimensions; the two-argument forms specify different numbers for the right and left faces; the unsigned forms specify the same number of layers for all dimensions; and the \texttt{unsigned*} forms specify different number of layers for the different dimensions: 
+The constructor for \texttt{GuardCellSizes} takes either one or two arguments, which are either \texttt{unsigned} or \texttt{unsigned*}. The one-argument forms specify the same number of guard layers for all dimensions; the two-argument forms specify different numbers for the right and left faces; the unsigned forms specify the same number of layers for all dimensions; and the \texttt{unsigned*} forms specify different number of layers for the different dimensions:
 \begin{smallcode}
 GuardCellSizes(unsigned s);  // Same no. left&right, same for all directions
 GuardCellSizes(unsigned *s); // Same no. left&right, value for each direction
 // Diff. left&right, same for all directions
-GuardCellSizes(unsigned l, unsigned r); 
+GuardCellSizes(unsigned l, unsigned r);
 // Diff. left&right, value for each direction
-GuardCellSizes(unsigned *l, unsigned *r); 
+GuardCellSizes(unsigned *l, unsigned *r);
 \end{smallcode}
 
 Section \ref{sec:index_fields}, ``Using \texttt{Index} Objects with \texttt{Field}'s'', shows examples using \texttt{Field} indexing to implement stencil operations. It discusses the numbers of guard layers required by one of the examples.
@@ -304,7 +304,7 @@ A += 4.0 + B;
 \end{smallcode}
 This technique can be used with any of the accumulation operators (\texttt{+=,-=,*=,/=}).
 
-\subsection{Using \texttt{Index} Objects with \texttt{Field}'s} \label{sec:index_fields}
+\subsection{\deprecated{Using \texttt{Index} Objects with \texttt{Field}'s}} \label{sec:index_fields}
 
 The \texttt{Field} object works intimately with \texttt{Index} objects to perform a wide variety of operations. Use the \texttt{Index} object to specify the access pattern into a data parallel \texttt{Field} object. Do this by using \texttt{Index} objects inside the brackets following a \texttt{Field} object as follows:
 \begin{smallcode}
@@ -481,7 +481,7 @@ will initialize the values in the \texttt{Field A} to:
    \label{tbl:t2}
    \end{center}
 %
-and the operation 
+and the operation
 \begin{smallcode}
 Field<double, Dim> B(layout);
 assign(B[I][J], A[I+1][J-2]);
@@ -498,7 +498,7 @@ will produce a \texttt{Field B} with the values:
         \end{tabular}
    \end{center}
 
-\subsection{Overloaded operators}
+\subsection{\changed{Overloaded operators}}
 
 \ippl pre-defines a suite of overloaded operators with the \texttt{Field} class. These include the unary $-$ operator; the binary operators, $+$, $-$, $*$, and $/$; and the accumulation operators \texttt{+=, -=, *=, /=}. Traits~\cite{traits} determine the appropriate casts and promotions of mixed types inside \texttt{Field}. For example, a \texttt{Field} of \texttt{int}'s added to a \texttt{Field} of \texttt{double}'s would perform the correct promotion of \texttt{int} to \texttt{double} element by element. As mentioned earlier, the assign operator $=$ does not work
 for most cases because of the lack of member function templates. In addition, the relational operators are not directly available due to conflicts in the current HP reference STL implementation. This functionality is provided through the explicit inlined binary function calls:
@@ -508,10 +508,10 @@ for most cases because of the lack of member function templates. In addition, th
         \hline
         binary function relationals & corresponding relation operator \\
         \hline
-        gt(A, B) & $A > B$ \\ 
-        lt(A, B) & $A < B$ \\ 
-        ge(A, B) & $A >= B$ \\ 
-        le(A, B) & $A  <= B$ \\ 
+        gt(A, B) & $A > B$ \\
+        lt(A, B) & $A < B$ \\
+        ge(A, B) & $A >= B$ \\
+        le(A, B) & $A  <= B$ \\
         eq(A, B) & $A == B$ \\
         ne(A, B) & $A != B$ \\
         \hline
@@ -541,7 +541,7 @@ The resulting \texttt{Field A} contains the values
         \end{tabular}
    \end{center}
 
-\subsection{The \texttt{where()} Function}
+\subsection{\deprecated{The \texttt{where()} Function}}
 
 Data parallel simulations often require element-by-element conditionals. The \ippl framework provides a \texttt{where} functions which reduces to the inlined conditional \texttt{operator?}: for each element of the \texttt{Field} objects passed to the \texttt{where()} function. The \texttt{where()} function takes three \texttt{Field} arguments:
 \begin{smallcode}
@@ -592,12 +592,12 @@ leaves the following values in \texttt{Field A}:
         \end{tabular}
    \end{center}
 
-\subsection{Mathematical Functions on \texttt{Field}'s}
+\subsection{\changed{Mathematical Functions on \texttt{Field}'s} -- (list of functions needs to be checked)}
 
 As would be expected of any framework for scientific simulation, all the standard mathematical operations are included. The unary functions take a \texttt{Field} object and return a \texttt{Field} object of the same dimension and size where the unary operation has been performed upon each element of the \texttt{Field}. The binary functions take two conforming \texttt{Field}'s and apply the function pairwise to each member of the two \texttt{Field}'s to produce a new conforming \texttt{Field} containing the resultant values. The following
 functions, mirroring those in math.h, are available in the framework for \texttt{Field} operations:
 \begin{smallcode}
-acos, asine, atan, cos, sin, tan, cosh, sinh, tanh, 
+acos, asine, atan, cos, sin, tan, cosh, sinh, tanh,
 exp, log, log10, pow, sqrt, ceil, fabs, floor.
 \end{smallcode}
 For machines which provide them in \texttt{math.h}, \ippl provides the \texttt{Field} version of the \texttt{Bessel, gamma, and error} functions
