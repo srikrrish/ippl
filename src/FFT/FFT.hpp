@@ -845,7 +845,7 @@ namespace ippl {
                                    // is our case
 	    //For Perlmutter since the mask to hide the other GPUs in the node is 
         //somehow not working there
-        opts.gpu_device_id = (int)(Ippl::Comm->rank() % 4);
+        //opts.gpu_device_id = (int)(Ippl::Comm->rank() % 4);
 
         int iflag;
         
