@@ -171,8 +171,8 @@ public:
     void initNUFFT(FieldLayout_t& FL, double& tol) {
         ippl::ParameterList fftParams;
 
-        fftParams.add("gpu_method", 1);
-        fftParams.add("gpu_sort", 0);
+        fftParams.add("gpu_method", 2);
+        fftParams.add("gpu_sort", 1);
         fftParams.add("gpu_kerevalmeth", 1);
         fftParams.add("tolerance", tol);
 
