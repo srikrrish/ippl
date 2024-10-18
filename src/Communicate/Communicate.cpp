@@ -37,6 +37,10 @@ namespace ippl {
     }
 
     Communicate::~Communicate() {
+        //MPI_Finalize();
+    }
+
+    void Communicate::finalize() {
         MPI_Finalize();
     }
 

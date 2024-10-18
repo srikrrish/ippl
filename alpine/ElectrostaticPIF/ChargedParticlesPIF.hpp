@@ -185,8 +185,8 @@ public:
 
     void gather() {
 
-        gatherPIFNUFFT(this->E, rho_m, Sk_m, this->R, nufftType2_mp.get(), q);
-        //gatherPIFNUDFT(this->E, rho_m, Sk_m, this->R);
+        //gatherPIFNUFFT(this->E, rho_m, Sk_m, this->R, nufftType2_mp.get(), q);
+        gatherPIFNUDFT(this->E, rho_m, Sk_m, this->R);
 
         //Set the charge back to original as we used this view as a 
         //temporary buffer during gather
@@ -197,10 +197,10 @@ public:
     void scatter() {
         
         Inform m("scatter ");
+        //rho_m = {0.0, 0.0};
+        //scatterPIFNUFFT(q, rho_m, Sk_m, this->R, nufftType1_mp.get());
         rho_m = {0.0, 0.0};
-        scatterPIFNUFFT(q, rho_m, Sk_m, this->R, nufftType1_mp.get());
-        //rhoDFT_m = {0.0, 0.0};
-        //scatterPIFNUDFT(q, rho_m, Sk_m, this->R);
+        scatterPIFNUDFT(q, rho_m, Sk_m, this->R);
 
         //dumpFieldData();
 

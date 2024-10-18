@@ -138,6 +138,8 @@ namespace ippl {
         void irecv(int src, int tag, archive_type&, MPI_Request&, size_type msize);
 
 
+	void finalize();
+
         MPI_Comm* getCommunicator() noexcept {
             return &comm_m;
         }

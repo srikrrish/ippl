@@ -147,6 +147,7 @@ const char* TestName = "LandauDampingPIF";
 
 int main(int argc, char *argv[]){
     Ippl ippl(argc, argv);
+    {
     
     Inform msg("LandauDampingPIF");
     Inform msg2all("LandauDampingPIF",INFORM_ALL_NODES);
@@ -358,6 +359,9 @@ int main(int argc, char *argv[]){
     IpplTimings::stopTimer(mainTimer);
     IpplTimings::print();
     IpplTimings::print(std::string("timing.dat"));
+    }
+    Ippl::finalize();
+    Ippl::Comm->finalize();
 
     return 0;
 }

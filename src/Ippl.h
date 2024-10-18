@@ -61,6 +61,8 @@ public:
     static MPI_Comm getComm() {return *Ippl::Comm->getCommunicator();}
 
     // Kill the communication and throw runtime error exception.
+    static void finalize();
+
     static void abort(const char * = 0);
 
     static void fence();

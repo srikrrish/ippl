@@ -150,7 +150,7 @@ const char* TestName = "TwoStreamInstabilityPIF";
 
 int main(int argc, char *argv[]){
     Ippl ippl(argc, argv);
-    
+    { 
     Inform msg(TestName);
     Inform msg2all(TestName,INFORM_ALL_NODES);
 
@@ -396,6 +396,9 @@ int main(int argc, char *argv[]){
     IpplTimings::stopTimer(mainTimer);
     IpplTimings::print();
     IpplTimings::print(std::string("timing.dat"));
+    }
+    Ippl::finalize();
+    Ippl::Comm->finalize();
 
     return 0;
 }

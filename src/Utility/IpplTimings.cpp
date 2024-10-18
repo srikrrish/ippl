@@ -42,6 +42,7 @@
 #include <fstream>
 #include <iostream>
 #include <algorithm>
+#include "nvtx3/nvToolsExt.h"
 
 Timing* IpplTimings::instance = new Timing();
 std::stack<Timing*> IpplTimings::stashedInstance;
@@ -85,6 +86,7 @@ Timing::TimerRef Timing::getTimer(const char *nm) {
 void Timing::startTimer(TimerRef t) {
     if (t >= TimerList.size())
         return;
+    nvtxRangePush(TimerList[t]->name.c_str());
     TimerList[t]->start();
 }
 
@@ -94,6 +96,7 @@ void Timing::stopTimer(TimerRef t) {
     if (t >= TimerList.size())
         return;
     TimerList[t]->stop();
+    nvtxRangePop();
 }
 
 

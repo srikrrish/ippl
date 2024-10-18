@@ -240,7 +240,7 @@ const char* TestName = "TwoStreamInstability";
 
 int main(int argc, char *argv[]){
     Ippl ippl(argc, argv);
-
+    {
     int spaceColor, timeColor;
     MPI_Comm spaceComm, timeComm;
 
@@ -764,6 +764,9 @@ int main(int argc, char *argv[]){
 
     MPI_Comm_free(&spaceComm);
     MPI_Comm_free(&timeComm);
+    }
+    Ippl::finalize();
+    Ippl::Comm->finalize();
 
 
     return 0;
