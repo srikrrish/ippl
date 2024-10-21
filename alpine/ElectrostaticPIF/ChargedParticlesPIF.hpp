@@ -169,18 +169,26 @@ public:
     }
 
     void initNUFFT(FieldLayout_t& FL, double& tol) {
-        ippl::ParameterList fftParams;
+        ippl::ParameterList fftParams1, fftParams2;
 
-        fftParams.add("gpu_method", 2);
-        fftParams.add("gpu_sort", 1);
-        fftParams.add("gpu_kerevalmeth", 1);
-        fftParams.add("tolerance", tol);
+        fftParams1.add("gpu_method", 2);
+        fftParams1.add("gpu_sort", 0);
+        fftParams1.add("gpu_kerevalmeth", 1);
+        fftParams1.add("tolerance", tol);
 
-        fftParams.add("use_cufinufft_defaults", false);
-        //fftParams.add("use_cufinufft_defaults", true);
+        fftParams1.add("use_cufinufft_defaults", false);
 
-        nufftType1_mp = std::make_shared<ippl::FFT<ippl::NUFFTransform, 3, double>>(FL, this->getLocalNum(), 1, fftParams);
-        nufftType2_mp = std::make_shared<ippl::FFT<ippl::NUFFTransform, 3, double>>(FL, this->getLocalNum(), 2, fftParams);
+        fftParams2.add("gpu_method", 2);
+        fftParams2.add("gpu_sort", 0);
+        fftParams2.add("gpu_kerevalmeth", 1);
+        fftParams2.add("tolerance", tol);
+
+        fftParams2.add("use_cufinufft_defaults", false);
+
+	//fftParams.add("use_cufinufft_defaults", true);
+
+        nufftType1_mp = std::make_shared<ippl::FFT<ippl::NUFFTransform, 3, double>>(FL, this->getLocalNum(), 1, fftParams1);
+        nufftType2_mp = std::make_shared<ippl::FFT<ippl::NUFFTransform, 3, double>>(FL, this->getLocalNum(), 2, fftParams2);
     }
 
     void gather() {
