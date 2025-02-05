@@ -1,7 +1,7 @@
-cmake_minimum_required (VERSION 3.1)
+cmake_minimum_required (VERSION 3.20.3)
 project (IPPL CXX)
-set (IPPL_VERSION_MAJOR 1)
-set (IPPL_VERSION_MINOR 1.4)
+set (IPPL_VERSION_MAJOR 3)
+set (IPPL_VERSION_MINOR 2.0)
 
 set (IPPL_VERSION_NAME "V${IPPL_VERSION_MAJOR}.${IPPL_VERSION_MINOR}")
 

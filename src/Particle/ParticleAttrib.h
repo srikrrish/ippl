@@ -160,21 +160,21 @@ namespace ippl {
                 const ParticleAttrib<Vector<P2, Dim>, Properties... >& pp,
                 const MPI_Comm& spaceComm) const;
 
-        template <unsigned Dim, class M, class C, typename P2, typename P3, typename P4>
-        void
-        scatterPIFNUDFT(Field<P2, Dim, M, C>& f, Field<P3, Dim, M, C>& Sk,
-                const ParticleAttrib<Vector<P4, Dim>, Properties... >& pp,
-                const MPI_Comm& spaceComm) const;
+//        template <unsigned Dim, class M, class C, typename P2, typename P3, typename P4>
+//        void
+//        scatterPIFNUDFT(Field<P2, Dim, M, C>& f, Field<P3, Dim, M, C>& Sk,
+//                const ParticleAttrib<Vector<P4, Dim>, Properties... >& pp,
+//                const MPI_Comm& spaceComm) const;
 
         template <unsigned Dim, class M, class C, typename P2>
         void
         gather(Field<T, Dim, M, C>& f,
                const ParticleAttrib<Vector<P2, Dim>, Properties...>& pp);
 
-        template <unsigned Dim, class M, class C, typename P2, typename P3, typename P4>
-        void
-        gatherPIFNUDFT(Field<P2, Dim, M, C>& f, Field<P3, Dim, M, C>& Sk,
-                const ParticleAttrib<Vector<P4, Dim>, Properties... >& pp);
+//        template <unsigned Dim, class M, class C, typename P2, typename P3, typename P4>
+//        void
+//        gatherPIFNUDFT(Field<P2, Dim, M, C>& f, Field<P3, Dim, M, C>& Sk,
+//                const ParticleAttrib<Vector<P4, Dim>, Properties... >& pp);
 
 #ifdef KOKKOS_ENABLE_CUDA
         template <unsigned Dim, class M, class C, typename P2, typename P3, typename P4>

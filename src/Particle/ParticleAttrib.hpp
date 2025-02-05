@@ -211,108 +211,108 @@ namespace ippl {
     }
 
 
-    template<typename T, class... Properties>
-    template <unsigned Dim, class M, class C, class FT, class ST, class PT>
-    void ParticleAttrib<T, Properties...>::scatterPIFNUDFT(Field<FT,Dim,M,C>& f, Field<ST,Dim,M,C>& Sk,
-                                                   const ParticleAttrib< Vector<PT,Dim>, Properties... >& pp,
-                                                   const MPI_Comm& spaceComm)
-    const
-    {
-        
-        static IpplTimings::TimerRef scatterPIFNUDFTTimer = IpplTimings::getTimer("ScatterPIFNUDFT");           
-        IpplTimings::startTimer(scatterPIFNUDFTTimer);
-        
-        using view_type = typename Field<FT, Dim, M, C>::view_type;
-        using vector_type = typename M::vector_type;
-        using value_type  = typename ParticleAttrib<T, Properties...>::value_type;
-        view_type fview = f.getView();
-        typename Field<ST, Dim, M, C>::view_type Skview = Sk.getView();
-        const int nghost = f.getNghost();
-        const FieldLayout<Dim>& layout = f.getLayout(); 
-        const M& mesh = f.get_mesh();
-        const vector_type& dx = mesh.getMeshSpacing();
-        const auto& domain = layout.getDomain();
-        vector_type Len;
-        Vector<int, Dim> N;
-
-
-        for (unsigned d=0; d < Dim; ++d) {
-            N[d] = domain[d].length();
-            Len[d] = dx[d] * N[d];
-        }
-        
-        typedef Kokkos::TeamPolicy<> team_policy;
-        typedef Kokkos::TeamPolicy<>::member_type member_type;
-
-        using view_type_temp = typename detail::ViewType<FT, 3>::view_type;
-
-        view_type_temp viewLocal("viewLocal",fview.extent(0),fview.extent(1),fview.extent(2));
-        
-        double pi = std::acos(-1.0);
-        Kokkos::complex<double> imag = {0.0, 1.0};
-
-        size_t Np = *(this->localNum_mp);
-
-        size_t flatN = N[0]*N[1]*N[2];
-
-        Kokkos::parallel_for("ParticleAttrib::scatterPIFNUDFT compute",
-                team_policy(flatN, Kokkos::AUTO),
-                KOKKOS_CLASS_LAMBDA(const member_type& teamMember) {
-                const size_t flatIndex = teamMember.league_rank();
-               
-#ifdef KOKKOS_ENABLE_CUDA
-                const int k = (int)(flatIndex / (N[0] * N[1]));
-                const int flatIndex2D = flatIndex - (k * N[0] * N[1]);
-                const int i = flatIndex2D % N[0];
-                const int j = (int)(flatIndex2D / N[0]);
-#else
-
-                const int i = (int)(flatIndex / (N[0] * N[1]));
-                const int flatIndex2D = flatIndex - (i * N[0] * N[1]);
-                const int k = flatIndex2D % N[0];
-                const int j = (int)(flatIndex2D / N[0]);
-#endif
-                
-                FT reducedValue = 0.0;
-                Vector<int, 3> iVec = {i, j, k};
-                vector_type kVec;
-                for(size_t d = 0; d < Dim; ++d) {
-                    //bool shift = (iVec[d] > (N[d]/2));
-                    //kVec[d] = 2 * pi / Len[d] * (iVec[d] - shift * N[d]);
-                    kVec[d] = 2 * pi / Len[d] * (iVec[d] - (N[d] / 2));
-                }
-                auto Sk = Skview(i+nghost, j+nghost, k+nghost);
-                Kokkos::parallel_reduce(Kokkos::TeamThreadRange(teamMember, Np),
-                [=](const size_t idx, FT& innerReduce)
-                {
-                    double arg = 0.0;
-                    for(size_t d = 0; d < Dim; ++d) {
-                        arg += kVec[d]*pp(idx)[d];
-                    }
-                    const value_type& val = dview_m(idx);
-
-                    innerReduce += Sk * (Kokkos::cos(arg) 
-                                - imag * Kokkos::sin(arg)) * val;
-                }, Kokkos::Sum<FT>(reducedValue));
-
-                if(teamMember.team_rank() == 0) {
-                    viewLocal(i+nghost,j+nghost,k+nghost) = reducedValue;
-                    //fview(i+nghost,j+nghost,k+nghost) = reducedValue;
-                }
-
-                }
-        );
-
-        IpplTimings::stopTimer(scatterPIFNUDFTTimer);
-
-        static IpplTimings::TimerRef scatterAllReducePIFTimer = IpplTimings::getTimer("scatterAllReducePIF");           
-        IpplTimings::startTimer(scatterAllReducePIFTimer);                                               
-        int viewSize = fview.extent(0)*fview.extent(1)*fview.extent(2);
-        MPI_Allreduce(viewLocal.data(), fview.data(), viewSize, 
-                      MPI_C_DOUBLE_COMPLEX, MPI_SUM, spaceComm);  
-        IpplTimings::stopTimer(scatterAllReducePIFTimer);
-
-    }
+//    template<typename T, class... Properties>
+//    template <unsigned Dim, class M, class C, class FT, class ST, class PT>
+//    void ParticleAttrib<T, Properties...>::scatterPIFNUDFT(Field<FT,Dim,M,C>& f, Field<ST,Dim,M,C>& Sk,
+//                                                   const ParticleAttrib< Vector<PT,Dim>, Properties... >& pp,
+//                                                   const MPI_Comm& spaceComm)
+//    const
+//    {
+//        
+//        static IpplTimings::TimerRef scatterPIFNUDFTTimer = IpplTimings::getTimer("ScatterPIFNUDFT");           
+//        IpplTimings::startTimer(scatterPIFNUDFTTimer);
+//        
+//        using view_type = typename Field<FT, Dim, M, C>::view_type;
+//        using vector_type = typename M::vector_type;
+//        using value_type  = typename ParticleAttrib<T, Properties...>::value_type;
+//        view_type fview = f.getView();
+//        typename Field<ST, Dim, M, C>::view_type Skview = Sk.getView();
+//        const int nghost = f.getNghost();
+//        const FieldLayout<Dim>& layout = f.getLayout(); 
+//        const M& mesh = f.get_mesh();
+//        const vector_type& dx = mesh.getMeshSpacing();
+//        const auto& domain = layout.getDomain();
+//        vector_type Len;
+//        Vector<int, Dim> N;
+//
+//
+//        for (unsigned d=0; d < Dim; ++d) {
+//            N[d] = domain[d].length();
+//            Len[d] = dx[d] * N[d];
+//        }
+//        
+//        typedef Kokkos::TeamPolicy<> team_policy;
+//        typedef Kokkos::TeamPolicy<>::member_type member_type;
+//
+//        using view_type_temp = typename detail::ViewType<FT, 3>::view_type;
+//
+//        view_type_temp viewLocal("viewLocal",fview.extent(0),fview.extent(1),fview.extent(2));
+//        
+//        double pi = std::acos(-1.0);
+//        Kokkos::complex<double> imag = {0.0, 1.0};
+//
+//        size_t Np = *(this->localNum_mp);
+//
+//        size_t flatN = N[0]*N[1]*N[2];
+//
+//        Kokkos::parallel_for("ParticleAttrib::scatterPIFNUDFT compute",
+//                team_policy(flatN, Kokkos::AUTO),
+//                KOKKOS_CLASS_LAMBDA(const member_type& teamMember) {
+//                const size_t flatIndex = teamMember.league_rank();
+//               
+//#ifdef KOKKOS_ENABLE_CUDA
+//                const int k = (int)(flatIndex / (N[0] * N[1]));
+//                const int flatIndex2D = flatIndex - (k * N[0] * N[1]);
+//                const int i = flatIndex2D % N[0];
+//                const int j = (int)(flatIndex2D / N[0]);
+//#else
+//
+//                const int i = (int)(flatIndex / (N[0] * N[1]));
+//                const int flatIndex2D = flatIndex - (i * N[0] * N[1]);
+//                const int k = flatIndex2D % N[0];
+//                const int j = (int)(flatIndex2D / N[0]);
+//#endif
+//                
+//                FT reducedValue = 0.0;
+//                Vector<int, 3> iVec = {i, j, k};
+//                vector_type kVec;
+//                for(size_t d = 0; d < Dim; ++d) {
+//                    //bool shift = (iVec[d] > (N[d]/2));
+//                    //kVec[d] = 2 * pi / Len[d] * (iVec[d] - shift * N[d]);
+//                    kVec[d] = 2 * pi / Len[d] * (iVec[d] - (N[d] / 2));
+//                }
+//                auto Sk = Skview(i+nghost, j+nghost, k+nghost);
+//                Kokkos::parallel_reduce(Kokkos::TeamThreadRange(teamMember, Np),
+//                [=](const size_t idx, FT& innerReduce)
+//                {
+//                    double arg = 0.0;
+//                    for(size_t d = 0; d < Dim; ++d) {
+//                        arg += kVec[d]*pp(idx)[d];
+//                    }
+//                    const value_type& val = dview_m(idx);
+//
+//                    innerReduce += Sk * (Kokkos::cos(arg) 
+//                                - imag * Kokkos::sin(arg)) * val;
+//                }, Kokkos::Sum<FT>(reducedValue));
+//
+//                if(teamMember.team_rank() == 0) {
+//                    viewLocal(i+nghost,j+nghost,k+nghost) = reducedValue;
+//                    //fview(i+nghost,j+nghost,k+nghost) = reducedValue;
+//                }
+//
+//                }
+//        );
+//
+//        IpplTimings::stopTimer(scatterPIFNUDFTTimer);
+//
+//        static IpplTimings::TimerRef scatterAllReducePIFTimer = IpplTimings::getTimer("scatterAllReducePIF");           
+//        IpplTimings::startTimer(scatterAllReducePIFTimer);                                               
+//        int viewSize = fview.extent(0)*fview.extent(1)*fview.extent(2);
+//        MPI_Allreduce(viewLocal.data(), fview.data(), viewSize, 
+//                      MPI_C_DOUBLE_COMPLEX, MPI_SUM, spaceComm);  
+//        IpplTimings::stopTimer(scatterAllReducePIFTimer);
+//
+//    }
 
 
     template<typename T, class... Properties>
@@ -371,112 +371,112 @@ namespace ippl {
         IpplTimings::stopTimer(gatherPICTimer);                                               
     }
 
-    template<typename T, class... Properties>
-    template <unsigned Dim, class M, class C, class FT, class ST, class PT>
-    void ParticleAttrib<T, Properties...>::gatherPIFNUDFT(Field<FT,Dim,M,C>& f, Field<ST,Dim,M,C>& Sk,
-                                                   const ParticleAttrib< Vector<PT,Dim>, Properties... >& pp)
-    {
-        static IpplTimings::TimerRef gatherPIFNUDFTTimer = IpplTimings::getTimer("GatherPIFNUDFT");           
-        IpplTimings::startTimer(gatherPIFNUDFTTimer);
-        
-        using view_type = typename Field<FT, Dim, M, C>::view_type;
-        using vector_type = typename M::vector_type;
-        using value_type  = typename ParticleAttrib<T, Properties...>::value_type;
-        view_type fview = f.getView();
-        typename Field<ST, Dim, M, C>::view_type Skview = Sk.getView();
-        const int nghost = f.getNghost();
-        const FieldLayout<Dim>& layout = f.getLayout(); 
-        const M& mesh = f.get_mesh();
-        const vector_type& dx = mesh.getMeshSpacing();
-        const auto& domain = layout.getDomain();
-        vector_type Len;
-        Vector<int, Dim> N;
-
-        for (unsigned d=0; d < Dim; ++d) {
-            N[d] = domain[d].length();
-            Len[d] = dx[d] * N[d];
-        }
-
-        typedef Kokkos::TeamPolicy<> team_policy;
-        typedef Kokkos::TeamPolicy<>::member_type member_type;
-
-        double pi = std::acos(-1.0);
-        Kokkos::complex<double> imag = {0.0, 1.0};
-
-        size_t Np = *(this->localNum_mp);
-
-        size_t flatN = N[0]*N[1]*N[2];
-
-        Kokkos::parallel_for("ParticleAttrib::gatherPIFNUDFT",
-                team_policy(Np, Kokkos::AUTO),
-                KOKKOS_CLASS_LAMBDA(const member_type& teamMember) {
-                const size_t idx = teamMember.league_rank();
-
-                value_type reducedValue = 0.0;
-                Kokkos::parallel_reduce(Kokkos::TeamThreadRange(teamMember, flatN),
-                [=](const size_t flatIndex, value_type& innerReduce)
-                {
-                    
-#ifdef KOKKOS_ENABLE_CUDA
-                    const int k = (int)(flatIndex / (N[0] * N[1]));
-                    const int flatIndex2D = flatIndex - (k * N[0] * N[1]);
-                    const int i = flatIndex2D % N[0];
-                    const int j = (int)(flatIndex2D / N[0]);
-#else
-                    const int i = (int)(flatIndex / (N[0] * N[1]));
-                    const int flatIndex2D = flatIndex - (i * N[0] * N[1]);
-                    const int k = flatIndex2D % N[0];
-                    const int j = (int)(flatIndex2D / N[0]);
-#endif
-
-                    Vector<int, 3> iVec = {i, j, k};
-                    vector_type kVec;
-                    double Dr = 0.0, arg = 0.0;
-                    for(size_t d = 0; d < Dim; ++d) {
-                        //bool shift = (iVec[d] > (N[d]/2));
-                        //kVec[d] = 2 * pi / Len[d] * (iVec[d] - shift * N[d]);
-                        //kVec[d] = 2 * pi / Len[d] * iVec[d];
-                        kVec[d] = 2 * pi / Len[d] * (iVec[d] - (N[d]/2));
-                        Dr += kVec[d] * kVec[d];
-                        arg += kVec[d]*pp(idx)[d];
-                    }
-                    
-
-                    FT Ek = 0.0;
-                    value_type Ex = 0.0;
-                    auto rho = fview(i+nghost,j+nghost,k+nghost);
-                    auto Sk = Skview(i+nghost,j+nghost,k+nghost);
-                    for(size_t d = 0; d < Dim; ++d) {
-                        
-                        bool isNotZero = (Dr != 0.0);
-                        double factor = isNotZero * (1.0 / (Dr + ((!isNotZero) * 1.0))); 
-                        Ek = -(imag * kVec[d] * rho * factor);
-                        
-                        //Inverse Fourier transform when the lhs is real. Use when 
-                        //we choose k \in [0 K) instead of from [-K/2+1 K/2] 
-                        //Ex[d] = 2.0 * (Ek.real() * Kokkos::cos(arg) 
-                        //        - Ek.imag() * Kokkos::sin(arg));
-                        Ek *= Sk * (Kokkos::cos(arg) 
-                                + imag * Kokkos::sin(arg));
-                        Ex[d] = Ek.real();
-                    }
-                    
-                    innerReduce += Ex;
-                }, Kokkos::Sum<value_type>(reducedValue));
-
-                teamMember.team_barrier();
-
-                if(teamMember.team_rank() == 0) {
-                    dview_m(idx) = reducedValue;
-                }
-
-                }
-        );
-
-        
-        IpplTimings::stopTimer(gatherPIFNUDFTTimer);
-
-    }
+//    template<typename T, class... Properties>
+//    template <unsigned Dim, class M, class C, class FT, class ST, class PT>
+//    void ParticleAttrib<T, Properties...>::gatherPIFNUDFT(Field<FT,Dim,M,C>& f, Field<ST,Dim,M,C>& Sk,
+//                                                   const ParticleAttrib< Vector<PT,Dim>, Properties... >& pp)
+//    {
+//        static IpplTimings::TimerRef gatherPIFNUDFTTimer = IpplTimings::getTimer("GatherPIFNUDFT");           
+//        IpplTimings::startTimer(gatherPIFNUDFTTimer);
+//        
+//        using view_type = typename Field<FT, Dim, M, C>::view_type;
+//        using vector_type = typename M::vector_type;
+//        using value_type  = typename ParticleAttrib<T, Properties...>::value_type;
+//        view_type fview = f.getView();
+//        typename Field<ST, Dim, M, C>::view_type Skview = Sk.getView();
+//        const int nghost = f.getNghost();
+//        const FieldLayout<Dim>& layout = f.getLayout(); 
+//        const M& mesh = f.get_mesh();
+//        const vector_type& dx = mesh.getMeshSpacing();
+//        const auto& domain = layout.getDomain();
+//        vector_type Len;
+//        Vector<int, Dim> N;
+//
+//        for (unsigned d=0; d < Dim; ++d) {
+//            N[d] = domain[d].length();
+//            Len[d] = dx[d] * N[d];
+//        }
+//
+//        typedef Kokkos::TeamPolicy<> team_policy;
+//        typedef Kokkos::TeamPolicy<>::member_type member_type;
+//
+//        double pi = std::acos(-1.0);
+//        Kokkos::complex<double> imag = {0.0, 1.0};
+//
+//        size_t Np = *(this->localNum_mp);
+//
+//        size_t flatN = N[0]*N[1]*N[2];
+//
+//        Kokkos::parallel_for("ParticleAttrib::gatherPIFNUDFT",
+//                team_policy(Np, Kokkos::AUTO),
+//                KOKKOS_CLASS_LAMBDA(const member_type& teamMember) {
+//                const size_t idx = teamMember.league_rank();
+//
+//                value_type reducedValue = 0.0;
+//                Kokkos::parallel_reduce(Kokkos::TeamThreadRange(teamMember, flatN),
+//                [=](const size_t flatIndex, value_type& innerReduce)
+//                {
+//                    
+//#ifdef KOKKOS_ENABLE_CUDA
+//                    const int k = (int)(flatIndex / (N[0] * N[1]));
+//                    const int flatIndex2D = flatIndex - (k * N[0] * N[1]);
+//                    const int i = flatIndex2D % N[0];
+//                    const int j = (int)(flatIndex2D / N[0]);
+//#else
+//                    const int i = (int)(flatIndex / (N[0] * N[1]));
+//                    const int flatIndex2D = flatIndex - (i * N[0] * N[1]);
+//                    const int k = flatIndex2D % N[0];
+//                    const int j = (int)(flatIndex2D / N[0]);
+//#endif
+//
+//                    Vector<int, 3> iVec = {i, j, k};
+//                    vector_type kVec;
+//                    double Dr = 0.0, arg = 0.0;
+//                    for(size_t d = 0; d < Dim; ++d) {
+//                        //bool shift = (iVec[d] > (N[d]/2));
+//                        //kVec[d] = 2 * pi / Len[d] * (iVec[d] - shift * N[d]);
+//                        //kVec[d] = 2 * pi / Len[d] * iVec[d];
+//                        kVec[d] = 2 * pi / Len[d] * (iVec[d] - (N[d]/2));
+//                        Dr += kVec[d] * kVec[d];
+//                        arg += kVec[d]*pp(idx)[d];
+//                    }
+//                    
+//
+//                    FT Ek = 0.0;
+//                    value_type Ex = 0.0;
+//                    auto rho = fview(i+nghost,j+nghost,k+nghost);
+//                    auto Sk = Skview(i+nghost,j+nghost,k+nghost);
+//                    for(size_t d = 0; d < Dim; ++d) {
+//                        
+//                        bool isNotZero = (Dr != 0.0);
+//                        double factor = isNotZero * (1.0 / (Dr + ((!isNotZero) * 1.0))); 
+//                        Ek = -(imag * kVec[d] * rho * factor);
+//                        
+//                        //Inverse Fourier transform when the lhs is real. Use when 
+//                        //we choose k \in [0 K) instead of from [-K/2+1 K/2] 
+//                        //Ex[d] = 2.0 * (Ek.real() * Kokkos::cos(arg) 
+//                        //        - Ek.imag() * Kokkos::sin(arg));
+//                        Ek *= Sk * (Kokkos::cos(arg) 
+//                                + imag * Kokkos::sin(arg));
+//                        Ex[d] = Ek.real();
+//                    }
+//                    
+//                    innerReduce += Ex;
+//                }, Kokkos::Sum<value_type>(reducedValue));
+//
+//                teamMember.team_barrier();
+//
+//                if(teamMember.team_rank() == 0) {
+//                    dview_m(idx) = reducedValue;
+//                }
+//
+//                }
+//        );
+//
+//        
+//        IpplTimings::stopTimer(gatherPIFNUDFTTimer);
+//
+//    }
 
 #ifdef KOKKOS_ENABLE_CUDA
     
