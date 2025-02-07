@@ -839,6 +839,10 @@ namespace ippl {
            opts.gpu_method = params.get<int>("gpu_method");
            opts.gpu_sort = params.get<int>("gpu_sort");
            opts.gpu_kerevalmeth = params.get<int>("gpu_kerevalmeth");
+           opts.gpu_binsizex = params.get<int>("gpu_binsizex");
+           opts.gpu_binsizey = params.get<int>("gpu_binsizey");
+           opts.gpu_binsizez = params.get<int>("gpu_binsizez");
+           opts.gpu_maxsubprobsize = params.get<int>("gpu_maxsubprobsize");
         }
 
 	    opts.gpu_maxbatchsize = 0; //default option. ignored for ntransf = 1 which

@@ -171,10 +171,14 @@ public:
     void initNUFFT(FieldLayout_t& FL, double& tol) {
         ippl::ParameterList fftParams1, fftParams2;
 
-        fftParams1.add("gpu_method", 1);
+        fftParams1.add("gpu_method", 2);
         fftParams1.add("gpu_sort", 0);
         fftParams1.add("gpu_kerevalmeth", 1);
         fftParams1.add("tolerance", tol);
+        fftParams1.add("gpu_binsizex", 8);
+        fftParams1.add("gpu_binsizey", 8);
+        fftParams1.add("gpu_binsizez", 2);
+        fftParams1.add("gpu_maxsubprobsize", 1024);
 
         fftParams1.add("use_cufinufft_defaults", false);
 
@@ -182,6 +186,10 @@ public:
         fftParams2.add("gpu_sort", 0);
         fftParams2.add("gpu_kerevalmeth", 1);
         fftParams2.add("tolerance", tol);
+        fftParams2.add("gpu_binsizex", 8);
+        fftParams2.add("gpu_binsizey", 8);
+        fftParams2.add("gpu_binsizez", 2);
+        fftParams2.add("gpu_maxsubprobsize", 1024);
 
         fftParams2.add("use_cufinufft_defaults", false);
 
