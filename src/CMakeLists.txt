@@ -84,6 +84,12 @@ if (ENABLE_SOLVERS)
     add_subdirectory (Solver)
 endif ()
 
+if (ENABLE_CATALYST)
+    find_package(catalyst 2.0 REQUIRED)
+    message (STATUS "Enable Catalyst")
+    message (STATUS "Found catalyst_DIR: ${catalyst_DIR}")
+endif()
+
 if (ENABLE_AMR)
     add_subdirectory(AmrParticle)
 endif ()
@@ -94,10 +100,15 @@ include_directories (
 
 add_library ( ippl ${IPPL_SRCS} ${IPPL_SRCS_FORT} )
 
+target_compile_definitions(ippl PUBLIC
+  $<$<BOOL:${ENABLE_FFT}>:-DENABLE_FFT>
+  $<$<BOOL:${ENABLE_CATALYST}>:-DENABLE_CATALYST>
+  $<$<BOOL:${ENABLE_NUFFT}>:-DENABLE_NUFFT>
+)
 
 if (ENABLE_NUFFT)
     target_include_directories(ippl PUBLIC ${CUFINUFFT_INCLUDE_DIR})
-    target_link_libraries(ippl PUBLIC Kokkos::kokkos ${HEFFTE_LIBRARY} ${CUFINUFFT_LIBRARY_DIR})
+    target_link_libraries(ippl PUBLIC Kokkos::kokkos ${CUFINUFFT_LIBRARY_DIR} $<$<BOOL:${ENABLE_FFT}>:Heffte> $<$<BOOL:${ENABLE_CATALYST}>:catalyst::catalyst>)
 else()
     target_link_libraries(ippl PUBLIC Kokkos::kokkos ${HEFFTE_LIBRARY})
 endif()

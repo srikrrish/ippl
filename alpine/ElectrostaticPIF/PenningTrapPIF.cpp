@@ -41,6 +41,10 @@
 #include <random>
 #include "Utility/IpplTimings.h"
 
+#ifdef ENABLE_CATALYST
+#include "CatalystAdaptor.h"
+#endif
+
 template <typename T>
 struct Newton1D {
 
@@ -139,6 +143,18 @@ const char* TestName = "PenningTrapPIF";
 int main(int argc, char *argv[]){
     Ippl ippl(argc, argv);
     {
+    
+#ifdef ENABLE_CATALYST
+    char* script = nullptr;
+    for (int i = 1; i < argc; ++i) {
+        if (std::string(argv[i]) == "--pvscript" && i + 1 < argc) {
+            script = argv[i+1]; 
+            i++;
+        }   
+    }
+    char* reducedArgv[] = { argv[0], script};
+    CatalystAdaptor::Initialize(2, reducedArgv);
+#endif
     Inform msg(TestName);
     Inform msg2all(TestName,INFORM_ALL_NODES);
 
@@ -221,7 +237,8 @@ int main(int argc, char *argv[]){
 
     double Q = -1562.5;
     double Bext = 5.0;
-    P = std::make_unique<bunch_type>(PL,hr,rmin,rmax,decomp,Q,Total_particles);
+    //P = std::make_unique<bunch_type>(PL,hr,rmin,rmax,decomp,Q,Total_particles);
+    P = std::make_shared<bunch_type>(PL,hr,rmin,rmax,decomp,Q,Total_particles);
 
     P->nr_m = nr;
 
@@ -256,8 +273,14 @@ int main(int argc, char *argv[]){
     ippl::Vector<double, 3> originDummy = {0.0, 0.0, 0.0};
     Mesh_t meshPIFhalf(domainPIFhalf, hDummy, originDummy);
 
+    ippl::Vector<double, 3> hFourier = {2*pi/length[0], 2*pi/length[1], 2*pi/length[2]};
+    ippl::Vector<double, 3> originFourier = {-pi/hr[0], -pi/hr[1], -pi/hr[2]};
+    Mesh_t meshFourier(domain, hFourier, originFourier);
+
+
     P->rhoPIFreal_m.initialize(mesh, FL);
     P->rhoPIFhalf_m.initialize(meshPIFhalf, FLPIFhalf);
+    P->rhoPIFFourierMag_m.initialize(meshFourier, FL);
 
     P->fft_mp = std::make_shared<FFT_t>(FL, FLPIFhalf, fftParams);
    
@@ -308,7 +331,15 @@ int main(int argc, char *argv[]){
     P->gather();
 
     IpplTimings::startTimer(dumpDataTimer);
-    //P->dumpEnergy();
+    P->dumpEnergy();
+#ifdef ENABLE_CATALYST
+    P->rhoPIFreal_m = (1/(hr[0]*hr[1]*hr[2])) * P->rhoPIFreal_m;
+    std::vector<CatalystAdaptor::FieldPair<T, Dim>> fields = {
+        {"rhoK", CatalystAdaptor::FieldVariant<double, 3>(&P->rhoPIFFourierMag_m)},
+        {"rhoR", CatalystAdaptor::FieldVariant<double, 3>(&P->rhoPIFreal_m)}
+    };
+    CatalystAdaptor::Execute(0, P->time_m, Ippl::Comm->rank(), P, fields);
+#endif
     IpplTimings::stopTimer(dumpDataTimer);
 
     double alpha = -0.5 * dt;
@@ -359,6 +390,8 @@ int main(int argc, char *argv[]){
         //scatter the charge onto the underlying grid
         P->scatter();
 
+        
+
         // Solve for and gather E field
         P->gather();
 
@@ -387,12 +420,21 @@ int main(int argc, char *argv[]){
 
         P->time_m += dt;
         IpplTimings::startTimer(dumpDataTimer);
-        //P->dumpEnergy();
+        P->dumpEnergy();
+#ifdef ENABLE_CATALYST
+        P->rhoPIFreal_m = (1/(hr[0]*hr[1]*hr[2])) * P->rhoPIFreal_m;
+        CatalystAdaptor::Execute(it, P->time_m, Ippl::Comm->rank(), P, fields);
+#endif
         IpplTimings::stopTimer(dumpDataTimer);
         msg << "Finished time step: " << it+1 << " time: " << P->time_m << endl;
     }
 
     msg << TestName << " End." << endl;
+
+#ifdef ENABLE_CATALYST
+    CatalystAdaptor::Finalize();
+#endif
+
     IpplTimings::stopTimer(mainTimer);
     IpplTimings::print();
     IpplTimings::print(std::string("timing.dat"));

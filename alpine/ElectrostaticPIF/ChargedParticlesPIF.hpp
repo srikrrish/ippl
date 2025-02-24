@@ -94,6 +94,7 @@ public:
     CxField_t rho_m;
     CxField_t rhoPIFhalf_m;
     Field_t rhoPIFreal_m;
+    Field_t rhoPIFFourierMag_m;
     CxField_t rhoDFT_m;
     Field_t Sk_m;
 
@@ -540,6 +541,23 @@ public:
        }, Kokkos::Sum<double>(temp));
 
        double charge = temp;
+
+       auto rhoPIFFourierMagview = rhoPIFFourierMag_m.getView();
+       //Compute magnitude in Fourier space 
+       Kokkos::parallel_for("Rho mag. in Fourier space",
+                             mdrange_type({0, 0, 0},
+                                          {N[0],
+                                           N[1],
+                                           N[2]}),
+                             KOKKOS_LAMBDA(const int i,
+                                           const int j,
+                                           const int k)
+       {
+            
+            auto rho = rhoview(i+nghost,j+nghost,k+nghost);
+            rhoPIFFourierMagview(i+nghost, j+nghost, k+nghost) = std::sqrt(rho.real() * rho.real() 
+                                                                         + rho.imag() * rho.imag());
+       });
 
        Vector_t totalMomentum = 0.0;
        

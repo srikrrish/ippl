@@ -73,6 +73,7 @@ if (ENABLE_NUFFT)
     message (STATUS "Found CUFINUFFT_DIR: ${CUFINUFFT_DIR}")
 endif ()
 
+option (ENABLE_CATALYST "Build example with Catalyst enabled" OFF)
 option (ENABLE_SOLVERS "Enable IPPL solvers" OFF)
 
 add_subdirectory (src)
