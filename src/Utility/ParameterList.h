@@ -27,8 +27,9 @@
 #include <iomanip>
 #include <map>
 #include <string>
-#include <variant>
+//#include <variant>
 
+#include "Types/Variant.h"
 #include "Utility/IpplException.h"
 
 namespace ippl {

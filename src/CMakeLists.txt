@@ -108,7 +108,7 @@ target_compile_definitions(ippl PUBLIC
 
 if (ENABLE_NUFFT)
     target_include_directories(ippl PUBLIC ${CUFINUFFT_INCLUDE_DIR})
-    target_link_libraries(ippl PUBLIC Kokkos::kokkos ${CUFINUFFT_LIBRARY_DIR} $<$<BOOL:${ENABLE_FFT}>:Heffte> $<$<BOOL:${ENABLE_CATALYST}>:catalyst::catalyst>)
+    target_link_libraries(ippl PUBLIC Kokkos::kokkos ${CUFINUFFT_LIBRARY_DIR} ${HEFFTE_LIBRARY} $<$<BOOL:${ENABLE_CATALYST}>:catalyst::catalyst>)
 else()
     target_link_libraries(ippl PUBLIC Kokkos::kokkos ${HEFFTE_LIBRARY})
 endif()

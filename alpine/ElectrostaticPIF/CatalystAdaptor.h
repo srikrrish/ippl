@@ -8,7 +8,7 @@
 #include <optional>
 #include <string>
 #include <vector>
-#include <variant>
+#include <Types/Variant.h>
 #include <utility>
 
 #include "Utility/IpplException.h"
@@ -16,11 +16,9 @@
 
 namespace CatalystAdaptor {
 
-    template <typename T, unsigned Dim>
-    using FieldVariant = std::variant<Field_t<Dim>*, VField_t<T, Dim>*>;
+    using FieldVariant = std::variant<Field_t*, VField_t*>;
 
-    template <typename T, unsigned Dim>
-    using FieldPair = std::pair<std::string, FieldVariant<T, Dim>>;
+    using FieldPair = std::pair<std::string, FieldVariant>;
 
     //template <typename T, unsigned Dim>
     //using ParticlePair = std::pair<std::string, std::shared_ptr<ParticleContainer<T, Dim> > >;
@@ -97,7 +95,7 @@ namespace CatalystAdaptor {
          conduit_cpp::Node& node) {
 
         // channel for particles
-        auto channel = node["catalyst/channels/ippl_" + particlesName];
+        auto channel = node["catalyst/channels/ippl_particle"];
         channel["type"].set_string("mesh");
 
         // in data channel now we adhere to conduits mesh blueprint definition
@@ -158,7 +156,7 @@ namespace CatalystAdaptor {
     void Execute_Field(Field* field, const std::string& fieldName,
          Kokkos::View<typename Field::view_type::data_type, Kokkos::LayoutLeft, Kokkos::HostSpace>& host_view_layout_left,
          conduit_cpp::Node& node) {
-        static_assert(Field::dim == 3, "CatalystAdaptor only supports 3D");
+        static_assert(Field::dimension == 3, "CatalystAdaptor only supports 3D");
 
         // A) define mesh
 
@@ -318,11 +316,11 @@ namespace CatalystAdaptor {
         }   
     }
 
-    template <typename T, unsigned Dim, class PLayout>
+    template <class PLayout>
     void Execute(int cycle, double time, int rank,
     const std::shared_ptr<ChargedParticlesPIF<PLayout>>& particleContainer,
     //const std::vector<CatalystAdaptor::ParticlePair<T, Dim>>& particles,
-    const std::vector<FieldPair<T, Dim>>& fields) {
+    const std::vector<FieldPair>& fields) {
 
         // catalyst blueprint definition
         // https://docs.paraview.org/en/latest/Catalyst/blueprints.html
@@ -339,8 +337,8 @@ namespace CatalystAdaptor {
 
         // Handle particles
 
-        typename ippl::ParticleAttrib<ippl::Vector<double, 3>::HostMirror R_host_map;
-        typename ippl::ParticleAttrib<ippl::Vector<double, 3>::HostMirror P_host_map;
+        typename ippl::ParticleAttrib<ippl::Vector<double, 3>>::HostMirror R_host_map;
+        typename ippl::ParticleAttrib<ippl::Vector<double, 3>>::HostMirror P_host_map;
         typename ippl::ParticleAttrib<double>::HostMirror q_host_map;
         typename ippl::ParticleAttrib<std::int64_t>::HostMirror ID_host_map;
 
@@ -367,8 +365,8 @@ namespace CatalystAdaptor {
 
         // Map of all Kokkos::Views. This keeps a reference on all Kokkos::Views
         // which ensures that Kokkos does not free the memory before the end of this function.
-        std::map<std::string, Kokkos::View<typename Field_t<Dim>::view_type::data_type, Kokkos::LayoutLeft, Kokkos::HostSpace> > scalar_host_views;
-        std::map<std::string, Kokkos::View<typename VField_t<T, Dim>::view_type::data_type, Kokkos::LayoutLeft, Kokkos::HostSpace> > vector_host_views;
+        std::map<std::string, Kokkos::View<typename Field_t::view_type::data_type, Kokkos::LayoutLeft, Kokkos::HostSpace> > scalar_host_views;
+        std::map<std::string, Kokkos::View<typename VField_t::view_type::data_type, Kokkos::LayoutLeft, Kokkos::HostSpace> > vector_host_views;
 
         // Loop over all fields
         for (const auto& fieldPair : fields)
@@ -377,15 +375,15 @@ namespace CatalystAdaptor {
             const auto& fieldVariant = fieldPair.second;
 
             // If field is a _scalar_ field
-            if (std::holds_alternative<Field_t<Dim>*>(fieldVariant)) {
-                Field_t<Dim>* field = std::get<Field_t<Dim>*>(fieldVariant);
+            if (std::holds_alternative<Field_t*>(fieldVariant)) {
+                Field_t* field = std::get<Field_t*>(fieldVariant);
                 // == ippl::Field<double, 3, ippl::UniformCartesian<double, 3>, Cell>*
 
                 Execute_Field(field, fieldName, scalar_host_views[fieldName], node);
             }
             // If field is a _vector_ field
-            else if (std::holds_alternative<VField_t<T, Dim>*>(fieldVariant)) {
-                VField_t<T, Dim>* field = std::get<VField_t<T, Dim>*>(fieldVariant);
+            else if (std::holds_alternative<VField_t*>(fieldVariant)) {
+                VField_t* field = std::get<VField_t*>(fieldVariant);
                 // == ippl::Field<ippl::Vector<double, 3>, 3, ippl::UniformCartesian<double, 3>, Cell>*
 
                 Execute_Field(field, fieldName, vector_host_views[fieldName], node);     

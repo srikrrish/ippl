@@ -42,7 +42,7 @@ typedef Field<double, Dim>   Field_t;
 typedef Field<Kokkos::complex<double>, Dim>   CxField_t;
 typedef Field<Vector_t, Dim> VField_t;
 
-typedef ippl::FFT<ippl::RCTransform, Dim, double> FFT_t;
+typedef ippl::FFT<ippl::CCTransform, Dim, double> FFT_t;
 
 const double pi = std::acos(-1.0);
 
@@ -515,16 +515,31 @@ public:
                shift = ((int)isLessThanHalf * 2) - 1;
                iVec[d] = (iVec[d] + shift * (Nhalf[d]/2)) + nghostHalf;
            }
-           rhoPIFhalfview(Nhalf[0]-1-i+nghostHalf, iVec[1], iVec[2]) = rhoview(i+nghostHalf,j+nghostHalf,k+nghostHalf);
+           //rhoPIFhalfview(Nhalf[0]-1-i+nghostHalf, iVec[1], iVec[2]).real() = rhoview(i+nghostHalf,j+nghostHalf,k+nghostHalf).real();
+           //rhoPIFhalfview(Nhalf[0]-1-i+nghostHalf, iVec[1], iVec[2]).imag() = -rhoview(i+nghostHalf,j+nghostHalf,k+nghostHalf).imag();
+           rhoPIFhalfview(iVec[0], iVec[1], iVec[2]) = rhoview(i+nghostHalf,j+nghostHalf,k+nghostHalf);
        });
 
 
        rhoPIFreal_m = 0.0;
-       fft_mp->transform(-1, rhoPIFreal_m, rhoPIFhalf_m);
+       //fft_mp->transform(-1, rhoPIFreal_m, rhoPIFhalf_m);
+       fft_mp->transform(-1, rhoPIFhalf_m);
+       auto rhoPIFrealview = rhoPIFreal_m.getView();
 
+       Kokkos::parallel_for("Get only real values",
+                             mdrange_type({0, 0, 0},
+                                          {N[0],
+                                           N[1],
+                                           N[2]}),
+                             KOKKOS_LAMBDA(const int i,
+                                           const int j,
+                                           const int k)
+       {
+           rhoPIFrealview(i+nghostHalf,j+nghostHalf,k+nghostHalf) = rhoPIFhalfview(i+nghostHalf,j+nghostHalf,k+nghostHalf).real();
+       });
 
        rhoPIFreal_m = (1.0/(nr_m[0]*nr_m[1]*nr_m[2])) * volume * rhoPIFreal_m;
-       auto rhoPIFrealview = rhoPIFreal_m.getView();
+       //auto rhoPIFrealview = rhoPIFreal_m.getView();
        temp = 0.0;
        Kokkos::parallel_reduce("Rho real sum",
                              mdrange_type({0, 0, 0},

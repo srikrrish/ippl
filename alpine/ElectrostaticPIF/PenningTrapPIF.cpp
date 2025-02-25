@@ -194,7 +194,7 @@ int main(int argc, char *argv[]){
 
     using bunch_type = ChargedParticlesPIF<PLayout_t>;
 
-    std::unique_ptr<bunch_type>  P;
+    std::shared_ptr<bunch_type>  P;
 
     ippl::NDIndex<Dim> domain;
     for (unsigned i = 0; i< Dim; i++) {
@@ -260,9 +260,9 @@ int main(int argc, char *argv[]){
     ippl::NDIndex<Dim> domainPIFhalf;
 
     for(unsigned d = 0; d < Dim; ++d) {
-        if(fftParams.template get<int>("r2c_direction") == (int)d)
-            domainPIFhalf[d] = ippl::Index(domain[d].length()/2 + 1);
-        else
+        //if(fftParams.template get<int>("r2c_direction") == (int)d)
+        //    domainPIFhalf[d] = ippl::Index(domain[d].length()/2 + 1);
+        //else
             domainPIFhalf[d] = ippl::Index(domain[d].length());
     }
     
@@ -282,7 +282,8 @@ int main(int argc, char *argv[]){
     P->rhoPIFhalf_m.initialize(meshPIFhalf, FLPIFhalf);
     P->rhoPIFFourierMag_m.initialize(meshFourier, FL);
 
-    P->fft_mp = std::make_shared<FFT_t>(FL, FLPIFhalf, fftParams);
+    //P->fft_mp = std::make_shared<FFT_t>(FL, FLPIFhalf, fftParams);
+    P->fft_mp = std::make_shared<FFT_t>(FLPIFhalf, fftParams);
    
     ////////////////////////////////////////////////////////////
 
@@ -334,9 +335,9 @@ int main(int argc, char *argv[]){
     P->dumpEnergy();
 #ifdef ENABLE_CATALYST
     P->rhoPIFreal_m = (1/(hr[0]*hr[1]*hr[2])) * P->rhoPIFreal_m;
-    std::vector<CatalystAdaptor::FieldPair<T, Dim>> fields = {
-        {"rhoK", CatalystAdaptor::FieldVariant<double, 3>(&P->rhoPIFFourierMag_m)},
-        {"rhoR", CatalystAdaptor::FieldVariant<double, 3>(&P->rhoPIFreal_m)}
+    std::vector<CatalystAdaptor::FieldPair> fields = {
+        {"rhoK", CatalystAdaptor::FieldVariant(&P->rhoPIFFourierMag_m)},
+        {"rhoR", CatalystAdaptor::FieldVariant(&P->rhoPIFreal_m)}
     };
     CatalystAdaptor::Execute(0, P->time_m, Ippl::Comm->rank(), P, fields);
 #endif

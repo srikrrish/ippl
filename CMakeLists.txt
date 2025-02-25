@@ -1,5 +1,5 @@
 cmake_minimum_required (VERSION 3.20.3)
-project (IPPL CXX)
+project (IPPL LANGUAGES C CXX)
 set (IPPL_VERSION_MAJOR 3)
 set (IPPL_VERSION_MINOR 2.0)
 
@@ -51,13 +51,20 @@ endif ()
 set (CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/CMakeModules")
 
 find_package (MPI REQUIRED)
+message (STATUS "The C compiler identification is: ${CMAKE_C_COMPILER_ID}")
 message (STATUS "The C++ compiler identification is: ${CMAKE_CXX_COMPILER_ID}")
 message (STATUS "The C++ compiler version is: ${CMAKE_CXX_COMPILER_VERSION}")
+message (STATUS "The MPI C compiler is: ${MPI_C_COMPILER}")
 message (STATUS "The MPI C++ compiler is: ${MPI_CXX_COMPILER}")
 message (STATUS "The underlying C++ compiler is: ${CMAKE_CXX_COMPILER}")
 
 
 find_package(Kokkos REQUIRED)
+
+option(USE_ALTERNATIVE_VARIANT "Use modified variant implementation (required for CUDA 12.2 + GCC 12.3.0)" OFF)
+if (USE_ALTERNATIVE_VARIANT)
+    add_definitions (-DUSE_ALTERNATIVE_VARIANT)
+endif()
 
 option (ENABLE_FFT "Enable FFT transform" OFF)
 if (ENABLE_FFT)
