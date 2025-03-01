@@ -357,6 +357,7 @@ int main(int argc, char *argv[]){
         Pcoarse->rhoPIC_m.initialize(meshPIC, FLPIC);
         Pcoarse->EfieldPIC_m.initialize(meshPIC, FLPIC);
         Pcoarse->initFFTSolver();
+	//Dummy solve done to do the initializations for heFFTe
     	Pcoarse->rhoPIC_m = 0.0;
     	Pcoarse->solver_mp->solve();
     }
