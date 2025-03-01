@@ -178,15 +178,23 @@ public:
         
         ippl::ParameterList fftCoarseParams,fftFineParams;
 
-        fftFineParams.add("gpu_method", 1);
+        fftFineParams.add("gpu_method", 2);
         fftFineParams.add("gpu_sort", 0);
         fftFineParams.add("gpu_kerevalmeth", 1);
         fftFineParams.add("tolerance", fineTol);
+        fftFineParams.add("gpu_binsizex", 8);
+        fftFineParams.add("gpu_binsizey", 8);
+        fftFineParams.add("gpu_binsizez", 2);
+        fftFineParams.add("gpu_maxsubprobsize", 1024);
 
-        fftCoarseParams.add("gpu_method", 1);
+        fftCoarseParams.add("gpu_method", 2);
         fftCoarseParams.add("gpu_sort", 0);
         fftCoarseParams.add("gpu_kerevalmeth", 1);
         fftCoarseParams.add("tolerance", coarseTol);
+        fftCoarseParams.add("gpu_binsizex", 8);
+        fftCoarseParams.add("gpu_binsizey", 8);
+        fftCoarseParams.add("gpu_binsizez", 2);
+        fftCoarseParams.add("gpu_maxsubprobsize", 1024);
 
         fftFineParams.add("use_cufinufft_defaults", false);
         fftCoarseParams.add("use_cufinufft_defaults", false);
@@ -608,7 +616,9 @@ public:
         rhoPIC_m = rhoPIC_m - (Q_m/((rmax_m[0] - rmin_m[0]) * (rmax_m[1] - rmin_m[1]) * (rmax_m[2] - rmin_m[2])));
     
         //Field solve
+        IpplTimings::startTimer(fieldSolvePIC);
         solver_mp->solve();
+        IpplTimings::stopTimer(fieldSolvePIC);
     
         // gather E field
         gather(E, EfieldPIC_m, Rtemp);
@@ -782,12 +792,12 @@ public:
 
     void BorisPIF(ParticleAttrib<Vector_t>& Rtemp,
                      ParticleAttrib<Vector_t>& Ptemp, const unsigned int& nt, 
-                     const double& dt, const double& tStartMySlice, const unsigned& nc, 
-                     const unsigned int& iter, const double& Bext,
-                     int rankTime, int rankSpace,
+                     const double& dt, const double& tStartMySlice, const unsigned& /*nc*/, 
+                     const unsigned int& /*iter*/, const double& Bext,
+                     int /*rankTime*/, int /*rankSpace*/,
                      const std::string& propagator, MPI_Comm& spaceComm) {
     
-        static IpplTimings::TimerRef dumpData = IpplTimings::getTimer("dumpData");
+        //static IpplTimings::TimerRef dumpData = IpplTimings::getTimer("dumpData");
         PLayout& PL = this->getLayout();
         rhoPIF_m = {0.0, 0.0};
         if(propagator == "Coarse") {
@@ -811,11 +821,11 @@ public:
 
         time_m = tStartMySlice;
 
-        if((time_m == 0.0) && (propagator == "Fine")) {
-            IpplTimings::startTimer(dumpData);
-            dumpEnergy(nc, iter, Ptemp, rankTime, rankSpace, spaceComm);
-            IpplTimings::stopTimer(dumpData);
-        }
+        //if((time_m == 0.0) && (propagator == "Fine")) {
+        //    IpplTimings::startTimer(dumpData);
+        //    dumpEnergy(nc, iter, Ptemp, rankTime, rankSpace, spaceComm);
+        //    IpplTimings::stopTimer(dumpData);
+        //}
         double alpha = -0.5 * dt;
         double DrInv = 1.0 / (1 + (std::pow((alpha * Bext), 2)));
         Vector_t rmax = rmax_m;
@@ -897,11 +907,11 @@ public:
 
             time_m += dt;
             
-            if(propagator == "Fine") {
-                IpplTimings::startTimer(dumpData);
-                dumpEnergy(nc, iter, Ptemp, rankTime, rankSpace, spaceComm);
-                IpplTimings::stopTimer(dumpData);
-            }
+            //if(propagator == "Fine") {
+            //    IpplTimings::startTimer(dumpData);
+            //    dumpEnergy(nc, iter, Ptemp, rankTime, rankSpace, spaceComm);
+            //    IpplTimings::stopTimer(dumpData);
+            //}
         }
     }
 

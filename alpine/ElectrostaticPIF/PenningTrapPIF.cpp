@@ -332,7 +332,7 @@ int main(int argc, char *argv[]){
     P->gather();
 
     IpplTimings::startTimer(dumpDataTimer);
-    P->dumpEnergy();
+    //P->dumpEnergy();
 #ifdef ENABLE_CATALYST
     P->rhoPIFreal_m = (1/(hr[0]*hr[1]*hr[2])) * P->rhoPIFreal_m;
     std::vector<CatalystAdaptor::FieldPair> fields = {
@@ -421,7 +421,7 @@ int main(int argc, char *argv[]){
 
         P->time_m += dt;
         IpplTimings::startTimer(dumpDataTimer);
-        P->dumpEnergy();
+        //P->dumpEnergy();
 #ifdef ENABLE_CATALYST
         P->rhoPIFreal_m = (1/(hr[0]*hr[1]*hr[2])) * P->rhoPIFreal_m;
         CatalystAdaptor::Execute(it, P->time_m, Ippl::Comm->rank(), P, fields);

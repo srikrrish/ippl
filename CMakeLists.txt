@@ -29,6 +29,7 @@ add_compile_options (-Wno-deprecated-declarations)
 add_compile_options (-Wno-stringop-overflow)
 add_compile_options (-Wno-array-bounds)
 add_compile_options (-Wno-restrict)
+add_compile_options (-Wno-missing-field-initializers)
 
 option (USE_STATIC_LIBRARIES "Link with static libraries if available" ON)
 
