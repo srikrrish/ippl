@@ -340,7 +340,7 @@ int main(int argc, char *argv[]){
                 MPI_UNSIGNED_LONG, MPI_SUM, spaceComm);
 
     double Q = -1562.5;
-    double Bext = 5.0;
+    double Bext = 2.0;//5.0;
     Pcoarse = std::make_unique<bunch_type>(PL,hrPIC,rmin,rmax,decomp,Q,Total_particles);
     Pbegin = std::make_unique<states_type>(PL);
     Pend = std::make_unique<states_type>(PL);
@@ -642,7 +642,7 @@ int main(int argc, char *argv[]){
             it += 1;
         }
         
-        MPI_Barrier(MPI_COMM_WORLD);
+        //MPI_Barrier(MPI_COMM_WORLD);
         if((nCycles > 1) && (nc < (nCycles - 1))) {  
             tag = 1000;//Ippl::Comm->next_tag(IPPL_PARAREAL_APP, IPPL_APP_CYCLE);
            

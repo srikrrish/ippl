@@ -182,7 +182,7 @@ void Timing::print(const std::string &fn, const std::map<std::string, unsigned i
 
     std::ofstream *timer_stream;
     Inform *msg;
-
+	
     if (TimerList.size() < 1)
         return;
 
@@ -221,8 +221,9 @@ void Timing::print(const std::string &fn, const std::map<std::string, unsigned i
          << std::setw(27) << "num Ranks"
          << std::setw(10) << "Wall max"
          << std::setw(10) << "Wall min"
-         << std::setw(11) << "Wall avg\n"
-         << std::string().assign(57,'=')
+         << std::setw(10) << "Wall avg"
+         << std::setw(11) << "Wall 0\n"
+         << std::string().assign(67,'=')
          << "\n";
     for (unsigned int i=0; i < TimerList.size(); ++i) {
         TimerInfo *tptr = TimerList[i].get();
@@ -243,7 +244,8 @@ void Timing::print(const std::string &fn, const std::map<std::string, unsigned i
              << " " << std::setw(9) << std::setprecision(4) << wallmax
              << " " << std::setw(9) << std::setprecision(4) << wallmin
              << " " << std::setw(9) << std::setprecision(4) << wallavg / Ippl::Comm->getNodes()
-             << endl;
+             << " " << std::setw(9) << std::setprecision(4) << tptr->wallTime
+	     << endl;
     }
     timer_stream->close();
     delete msg;
