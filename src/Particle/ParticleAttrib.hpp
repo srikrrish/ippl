@@ -202,11 +202,19 @@ namespace ippl {
 
         IpplTimings::stopTimer(scatterPICTimer);
 
-        static IpplTimings::TimerRef scatterAllReducePICTimer = IpplTimings::getTimer("scatterAllReducePIC");           
+	int nRanksSpace;
+	MPI_Comm_size(spaceComm, &nRanksSpace);
+
+	static IpplTimings::TimerRef scatterAllReducePICTimer = IpplTimings::getTimer("scatterAllReducePIC");           
         IpplTimings::startTimer(scatterAllReducePICTimer);                                               
-        int viewSize = view.extent(0) * view.extent(1) * view.extent(2);
-        MPI_Allreduce(viewLocal.data(), view.data(), viewSize, 
-                      MPI_DOUBLE, MPI_SUM, spaceComm);  
+        if(nRanksSpace > 1) { 
+        	int viewSize = view.extent(0) * view.extent(1) * view.extent(2);
+        	MPI_Allreduce(viewLocal.data(), view.data(), viewSize, 
+        	              MPI_DOUBLE, MPI_SUM, spaceComm);  
+	}
+	else {
+    		Kokkos::deep_copy(view, viewLocal);
+	}
         IpplTimings::stopTimer(scatterAllReducePICTimer);
     }
 
@@ -512,12 +520,20 @@ namespace ippl {
         const int nghost = f.getNghost();
         
         IpplTimings::stopTimer(scatterPIFNUFFTTimer);
+	
+	int nRanksSpace;
+	MPI_Comm_size(spaceComm, &nRanksSpace);
 
         static IpplTimings::TimerRef scatterAllReducePIFTimer = IpplTimings::getTimer("scatterAllReducePIF");           
         IpplTimings::startTimer(scatterAllReducePIFTimer);                                               
-        int viewSize = fview.extent(0)*fview.extent(1)*fview.extent(2);
-        MPI_Allreduce(viewLocal.data(), fview.data(), viewSize, 
-                      MPI_C_DOUBLE_COMPLEX, MPI_SUM, spaceComm);  
+	if(nRanksSpace >  1) {
+        	int viewSize = fview.extent(0)*fview.extent(1)*fview.extent(2);
+        	MPI_Allreduce(viewLocal.data(), fview.data(), viewSize, 
+        	              MPI_C_DOUBLE_COMPLEX, MPI_SUM, spaceComm);  
+	}
+	else {
+    		Kokkos::deep_copy(fview, viewLocal);
+	}
         IpplTimings::stopTimer(scatterAllReducePIFTimer);
 
         IpplTimings::startTimer(scatterPIFNUFFTTimer);
