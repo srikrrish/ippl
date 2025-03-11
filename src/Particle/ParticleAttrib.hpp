@@ -524,12 +524,24 @@ namespace ippl {
 	int nRanksSpace;
 	MPI_Comm_size(spaceComm, &nRanksSpace);
 
+
+
         static IpplTimings::TimerRef scatterAllReducePIFTimer = IpplTimings::getTimer("scatterAllReducePIF");           
         IpplTimings::startTimer(scatterAllReducePIFTimer);                                               
 	if(nRanksSpace >  1) {
+		// Define MPI complex type as contiguous pairs of doubles
+        	//MPI_Datatype MPI_KOKKOS_COMPLEX;
+        	//MPI_Type_contiguous(2, MPI_DOUBLE, &MPI_KOKKOS_COMPLEX);
+        	//MPI_Type_commit(&MPI_KOKKOS_COMPLEX);
+		double* raw_ptr_viewLocal = reinterpret_cast<double*>(viewLocal.data());
+		double* raw_ptr_fview = reinterpret_cast<double*>(fview.data());
         	int viewSize = fview.extent(0)*fview.extent(1)*fview.extent(2);
-        	MPI_Allreduce(viewLocal.data(), fview.data(), viewSize, 
-        	              MPI_C_DOUBLE_COMPLEX, MPI_SUM, spaceComm);  
+        	//MPI_Allreduce(viewLocal.data(), fview.data(), viewSize, 
+        	//              MPI_C_DOUBLE_COMPLEX, MPI_SUM, spaceComm);
+        	MPI_Allreduce(raw_ptr_viewLocal, raw_ptr_fview, 2*viewSize, 
+        	              MPI_DOUBLE, MPI_SUM, spaceComm);
+		//MPI_Type_free(&MPI_KOKKOS_COMPLEX);
+		  
 	}
 	else {
     		Kokkos::deep_copy(fview, viewLocal);
