@@ -82,6 +82,9 @@ if (ENABLE_NUFFT)
     message (STATUS "Found CUFINUFFT_DIR: ${CUFINUFFT_DIR}")
 endif ()
 
+find_package(NCCL REQUIRED)
+message (STATUS "Found NCCL_DIR: ${NCCL_DIR}")
+
 option (ENABLE_CATALYST "Build example with Catalyst enabled" OFF)
 option (ENABLE_SOLVERS "Enable IPPL solvers" OFF)
 

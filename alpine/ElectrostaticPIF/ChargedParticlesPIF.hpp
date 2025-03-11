@@ -17,7 +17,8 @@
 //
 
 #include "Ippl.h"
-
+#include <nccl.h>
+#include <cuda_runtime.h>
 // dimension of our positions
 constexpr unsigned Dim = 3;
 
@@ -120,6 +121,8 @@ public:
     std::shared_ptr<FFT_t> fft_mp;
 
     std::shared_ptr<ippl::FFT<ippl::NUFFTransform, 3, double>> nufftType1_mp,nufftType2_mp;
+
+    ncclComm_t comm_m;
 
 public:
     ParticleAttrib<double>     q; // charge
