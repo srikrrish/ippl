@@ -18,7 +18,7 @@
 
 #include "Ippl.h"
 #include <nccl.h>
-#include <cuda_runtime.h>
+//#include <cuda_runtime.h>
 // dimension of our positions
 constexpr unsigned Dim = 3;
 
@@ -218,7 +218,7 @@ public:
         
         Inform m("scatter ");
         rho_m = {0.0, 0.0};
-        scatterPIFNUFFT(q, rho_m, Sk_m, this->R, nufftType1_mp.get());
+        scatterPIFNUFFT(q, rho_m, Sk_m, this->R, nufftType1_mp.get(), comm_m);
         //rho_m = {0.0, 0.0};
         //scatterPIFNUDFT(q, rho_m, Sk_m, this->R);
 

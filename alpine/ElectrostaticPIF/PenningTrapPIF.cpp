@@ -196,6 +196,15 @@ int main(int argc, char *argv[]){
 
     std::shared_ptr<bunch_type>  P;
 
+    ncclUniqueId nccl_id;
+
+    if (Ippl::Comm->rank() == 0) {
+    	ncclGetUniqueId(&nccl_id);
+    }
+    MPI_Bcast(&nccl_id, sizeof(nccl_id), MPI_BYTE, 0, Ippl::getComm(); 
+    ncclCommInitRank(&P->comm_m, Ippl::Comm->size(), nccl_id, Ippl::Comm->rank());
+
+
     ippl::NDIndex<Dim> domain;
     for (unsigned i = 0; i< Dim; i++) {
         domain[i] = ippl::Index(nr[i]);
@@ -439,6 +448,7 @@ int main(int argc, char *argv[]){
     IpplTimings::stopTimer(mainTimer);
     IpplTimings::print();
     IpplTimings::print(std::string("timing.dat"));
+    ncclCommDestroy(P->comm_m);
     }
     Ippl::finalize();
     Ippl::Comm->finalize();

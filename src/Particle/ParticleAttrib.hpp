@@ -492,7 +492,7 @@ namespace ippl {
     template <unsigned Dim, class M, class C, class FT, class ST, class PT>
     void ParticleAttrib<T, Properties...>::scatterPIFNUFFT(Field<FT,Dim,M,C>& f, Field<ST,Dim,M,C>& Sk,
                                                    const ParticleAttrib< Vector<PT,Dim>, Properties... >& pp,
-                                                   FFT<NUFFTransform, 3, ST>* nufft,
+                                                   FFT<NUFFTransform, 3, ST>* nufft, ncclComm_t& commNCCL, 
                                                    const MPI_Comm& spaceComm)
     const
     {
@@ -535,11 +535,17 @@ namespace ippl {
         	//MPI_Type_commit(&MPI_KOKKOS_COMPLEX);
 		double* raw_ptr_viewLocal = reinterpret_cast<double*>(viewLocal.data());
 		double* raw_ptr_fview = reinterpret_cast<double*>(fview.data());
+		cudaStream_t stream;
+		cudaStreamCreate(&stream);
         	int viewSize = fview.extent(0)*fview.extent(1)*fview.extent(2);
         	//MPI_Allreduce(viewLocal.data(), fview.data(), viewSize, 
         	//              MPI_C_DOUBLE_COMPLEX, MPI_SUM, spaceComm);
-        	MPI_Allreduce(raw_ptr_viewLocal, raw_ptr_fview, 2*viewSize, 
-        	              MPI_DOUBLE, MPI_SUM, spaceComm);
+        	//MPI_Allreduce(raw_ptr_viewLocal, raw_ptr_fview, 2*viewSize, 
+        	//              MPI_DOUBLE, MPI_SUM, spaceComm);
+		ncclAllReduce(raw_ptr_viewLocal, raw_ptr_fview, 2*viewSize, ncclDouble, ncclSum, commNCCL, stream);
+		cudaStreamSynchronize(stream);
+		cudaStreamDestroy(stream);
+
 		//MPI_Type_free(&MPI_KOKKOS_COMPLEX);
 		  
 	}
@@ -660,11 +666,11 @@ namespace ippl {
     inline
     void scatterPIFNUFFT(const ParticleAttrib<P1, Properties...>& attrib, Field<P2, Dim, M, C>& f,
                  Field<P3, Dim, M, C>& Sk, const ParticleAttrib<Vector<P4, Dim>, Properties...>& pp,
-                 FFT<NUFFTransform, 3, P3>* nufft,
+                 FFT<NUFFTransform, 3, P3>* nufft, ncclComm_t& commNCCL, 
                  const MPI_Comm& spaceComm = MPI_COMM_WORLD)
     {
 #ifdef KOKKOS_ENABLE_CUDA
-        attrib.scatterPIFNUFFT(f, Sk, pp, nufft, spaceComm);
+        attrib.scatterPIFNUFFT(f, Sk, pp, nufft, commNCCL, spaceComm);
 #else
         //throw IpplException("scatterPIFNUFFT", "The NUFFT library cuFINUFFT currently only works with CUDA and hence Kokkos needs to 
         //                     be compiled with CUDA. Otherwise use scatterPIFNUDFT.");

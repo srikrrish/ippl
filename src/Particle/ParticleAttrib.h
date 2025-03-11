@@ -33,6 +33,8 @@
 #include "Particle/ParticleAttribBase.h"
 #include "FFT/FFT.h"
 #include "Utility/ParameterList.h"
+#include <nccl.h>
+#include <cuda_runtime.h>
 
 namespace Kokkos { //reduction identity must be defined in Kokkos namespace
     template<>
@@ -181,7 +183,7 @@ namespace ippl {
         void
         scatterPIFNUFFT(Field<P2, Dim, M, C>& f, Field<P3, Dim, M, C>& Sk,
                 const ParticleAttrib<Vector<P4, Dim>, Properties... >& pp,
-                FFT<NUFFTransform, 3, P3>* nufft,
+                FFT<NUFFTransform, 3, P3>* nufft, ncclComm_t& commNCCL, 
                 const MPI_Comm& spaceComm) const;
         
         template <unsigned Dim, class M, class C, typename P2, typename P3, typename P4>
