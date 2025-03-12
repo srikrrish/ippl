@@ -18,7 +18,7 @@
 
 #include "Ippl.h"
 #include <nccl.h>
-//#include <cuda_runtime.h>
+#include <cuda_runtime.h>
 // dimension of our positions
 constexpr unsigned Dim = 3;
 
@@ -122,7 +122,6 @@ public:
 
     std::shared_ptr<ippl::FFT<ippl::NUFFTransform, 3, double>> nufftType1_mp,nufftType2_mp;
 
-    ncclComm_t comm_m;
 
 public:
     ParticleAttrib<double>     q; // charge
@@ -214,11 +213,11 @@ public:
 
     }
 
-    void scatter() {
+    void scatter(ncclComm_t& commNCCL) {
         
         Inform m("scatter ");
         rho_m = {0.0, 0.0};
-        scatterPIFNUFFT(q, rho_m, Sk_m, this->R, nufftType1_mp.get(), comm_m);
+        scatterPIFNUFFT(q, rho_m, Sk_m, this->R, nufftType1_mp.get(), commNCCL);
         //rho_m = {0.0, 0.0};
         //scatterPIFNUDFT(q, rho_m, Sk_m, this->R);
 

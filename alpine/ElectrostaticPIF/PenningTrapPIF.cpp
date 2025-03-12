@@ -196,14 +196,17 @@ int main(int argc, char *argv[]){
 
     std::shared_ptr<bunch_type>  P;
 
+    ncclComm_t commNCCL;
     ncclUniqueId nccl_id;
+    //cudaStream_t stream;
 
     if (Ippl::Comm->rank() == 0) {
     	ncclGetUniqueId(&nccl_id);
     }
-    MPI_Bcast(&nccl_id, sizeof(nccl_id), MPI_BYTE, 0, Ippl::getComm(); 
-    ncclCommInitRank(&P->comm_m, Ippl::Comm->size(), nccl_id, Ippl::Comm->rank());
+    MPI_Bcast(&nccl_id, sizeof(nccl_id), MPI_BYTE, 0, Ippl::getComm()); 
+    ncclCommInitRank(&commNCCL, Ippl::Comm->size(), nccl_id, Ippl::Comm->rank());
 
+    //cudaStreamCreate(&stream);
 
     ippl::NDIndex<Dim> domain;
     for (unsigned i = 0; i< Dim; i++) {
@@ -336,7 +339,7 @@ int main(int argc, char *argv[]){
     double tol   = std::atof(argv[9]);
     P->initNUFFT(FL,tol);
 
-    P->scatter();
+    P->scatter(commNCCL);
 
     P->gather();
 
@@ -398,7 +401,7 @@ int main(int argc, char *argv[]){
         IpplTimings::stopTimer(BCTimer);
 
         //scatter the charge onto the underlying grid
-        P->scatter();
+        P->scatter(commNCCL);
 
         
 
@@ -448,7 +451,7 @@ int main(int argc, char *argv[]){
     IpplTimings::stopTimer(mainTimer);
     IpplTimings::print();
     IpplTimings::print(std::string("timing.dat"));
-    ncclCommDestroy(P->comm_m);
+    ncclCommDestroy(commNCCL);
     }
     Ippl::finalize();
     Ippl::Comm->finalize();
