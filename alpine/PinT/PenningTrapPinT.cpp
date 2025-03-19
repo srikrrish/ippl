@@ -340,7 +340,7 @@ int main(int argc, char *argv[]){
                 MPI_UNSIGNED_LONG, MPI_SUM, spaceComm);
 
     double Q = -1562.5;
-    double Bext = 100.0;
+    double Bext = 5.0;
     Pcoarse = std::make_unique<bunch_type>(PL,hrPIC,rmin,rmax,decomp,Q,Total_particles);
     Pbegin = std::make_unique<states_type>(PL);
     Pend = std::make_unique<states_type>(PL);
