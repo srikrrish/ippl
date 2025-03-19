@@ -512,7 +512,8 @@ namespace ippl {
         //tempField.initialize(mesh, layout);
 
         //tempField = 0.0;
-        
+       
+	f = 0.0; 
         nufft->transform(pp, q, f);
         
         using view_type = typename Field<FT, Dim, M, C>::view_type;
@@ -541,7 +542,7 @@ namespace ippl {
         	//MPI_Allreduce(raw_ptr_viewLocal, raw_ptr_fview, 2*viewSize, 
         	//              MPI_DOUBLE, MPI_SUM, spaceComm);
         	MPI_Allreduce(MPI_IN_PLACE, raw_ptr_fview, 2*viewSize, 
-        	              MPI_FLOAT, MPI_SUM, spaceComm);
+        	              MPI_DOUBLE, MPI_SUM, spaceComm);
 		  
 	}
 	//else {
