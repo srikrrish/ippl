@@ -137,8 +137,8 @@ namespace ippl {
 
 
     template<typename T, class... Properties>
-    template <unsigned Dim, class M, class C, class PT>
-    void ParticleAttrib<T, Properties...>::scatter(Field<T,Dim,M,C>& f,
+    template <unsigned Dim, class M, class C, class PT, class FT>
+    void ParticleAttrib<T, Properties...>::scatter(Field<FT,Dim,M,C>& f,
                                                    const ParticleAttrib< Vector<PT,Dim>, Properties... >& pp,
                                                    const MPI_Comm& spaceComm)
     const
@@ -146,7 +146,7 @@ namespace ippl {
         static IpplTimings::TimerRef scatterPICTimer = IpplTimings::getTimer("ScatterPIC");           
         IpplTimings::startTimer(scatterPICTimer);                                               
         
-        typename Field<T, Dim, M, C>::view_type view = f.getView();
+        typename Field<FT, Dim, M, C>::view_type view = f.getView();
 
         M& mesh = f.get_mesh();
 
@@ -162,13 +162,13 @@ namespace ippl {
         const int nghost = f.getNghost();
 
 
-        Field<T, Dim, M, C> tempField;
+        //Field<T, Dim, M, C> tempField;
 
-        tempField.initialize(mesh, layout);
+        //tempField.initialize(mesh, layout);
 
-        tempField = 0.0;
+        //tempField = 0.0;
         
-        typename Field<T, Dim, M, C>::view_type viewLocal = tempField.getView();
+        //typename Field<T, Dim, M, C>::view_type viewLocal = tempField.getView();
 
         Kokkos::parallel_for(
             "ParticleAttrib::scatter",
@@ -187,18 +187,18 @@ namespace ippl {
 
                 // scatter
                 const value_type& val = dview_m(idx);
-                Kokkos::atomic_add(&viewLocal(i-1, j-1, k-1), wlo[0] * wlo[1] * wlo[2] * val);
-                Kokkos::atomic_add(&viewLocal(i-1, j-1, k  ), wlo[0] * wlo[1] * whi[2] * val);
-                Kokkos::atomic_add(&viewLocal(i-1, j,   k-1), wlo[0] * whi[1] * wlo[2] * val);
-                Kokkos::atomic_add(&viewLocal(i-1, j,   k  ), wlo[0] * whi[1] * whi[2] * val);
-                Kokkos::atomic_add(&viewLocal(i,   j-1, k-1), whi[0] * wlo[1] * wlo[2] * val);
-                Kokkos::atomic_add(&viewLocal(i,   j-1, k  ), whi[0] * wlo[1] * whi[2] * val);
-                Kokkos::atomic_add(&viewLocal(i,   j,   k-1), whi[0] * whi[1] * wlo[2] * val);
-                Kokkos::atomic_add(&viewLocal(i,   j,   k  ), whi[0] * whi[1] * whi[2] * val);
+                Kokkos::atomic_add(&view(i-1, j-1, k-1), (float)(wlo[0] * wlo[1] * wlo[2] * val));
+                Kokkos::atomic_add(&view(i-1, j-1, k  ), (float)(wlo[0] * wlo[1] * whi[2] * val));
+                Kokkos::atomic_add(&view(i-1, j,   k-1), (float)(wlo[0] * whi[1] * wlo[2] * val));
+                Kokkos::atomic_add(&view(i-1, j,   k  ), (float)(wlo[0] * whi[1] * whi[2] * val));
+                Kokkos::atomic_add(&view(i,   j-1, k-1), (float)(whi[0] * wlo[1] * wlo[2] * val));
+                Kokkos::atomic_add(&view(i,   j-1, k  ), (float)(whi[0] * wlo[1] * whi[2] * val));
+                Kokkos::atomic_add(&view(i,   j,   k-1), (float)(whi[0] * whi[1] * wlo[2] * val));
+                Kokkos::atomic_add(&view(i,   j,   k  ), (float)(whi[0] * whi[1] * whi[2] * val));
             }
         );
             
-        tempField.accumulateHalo();
+        //tempField.accumulateHalo();
 
         IpplTimings::stopTimer(scatterPICTimer);
 
@@ -209,12 +209,14 @@ namespace ippl {
         IpplTimings::startTimer(scatterAllReducePICTimer);                                               
         if(nRanksSpace > 1) { 
         	int viewSize = view.extent(0) * view.extent(1) * view.extent(2);
-        	MPI_Allreduce(viewLocal.data(), view.data(), viewSize, 
-        	              MPI_DOUBLE, MPI_SUM, spaceComm);  
+        	//MPI_Allreduce(viewLocal.data(), view.data(), viewSize, 
+        	//              MPI_DOUBLE, MPI_SUM, spaceComm);  
+        	MPI_Allreduce(MPI_IN_PLACE, view.data(), viewSize, 
+        	              MPI_FLOAT, MPI_SUM, spaceComm);  
 	}
-	else {
-    		Kokkos::deep_copy(view, viewLocal);
-	}
+	//else {
+    	//	Kokkos::deep_copy(view, viewLocal);
+	//}
         IpplTimings::stopTimer(scatterAllReducePICTimer);
     }
 
@@ -324,8 +326,8 @@ namespace ippl {
 
 
     template<typename T, class... Properties>
-    template <unsigned Dim, class M, class C, typename P2>
-    void ParticleAttrib<T, Properties...>::gather(Field<T, Dim, M, C>& f,
+    template <unsigned Dim, class M, class C, typename P2, typename FT>
+    void ParticleAttrib<T, Properties...>::gather(Field<FT, Dim, M, C>& f,
                                                   const ParticleAttrib<Vector<P2, Dim>, Properties...>& pp)
     {
 
@@ -334,7 +336,7 @@ namespace ippl {
 
         f.fillHalo();
         
-        const typename Field<T, Dim, M, C>::view_type view = f.getView();
+        const typename Field<FT, Dim, M, C>::view_type view = f.getView();
 
         const M& mesh = f.get_mesh();
 
@@ -357,8 +359,8 @@ namespace ippl {
                 // find nearest grid point
                 vector_type l = (pp(idx) - origin) * invdx + 0.5;
                 Vector<int, Dim> index = l;
-                Vector<double, Dim> whi = l - index;
-                Vector<double, Dim> wlo = 1.0 - whi;
+                Vector<float, Dim> whi = l - index;
+                Vector<float, Dim> wlo = 1.0 - whi;
 
                 const size_t i = index[0] - lDom[0].first() + nghost;
                 const size_t j = index[1] - lDom[1].first() + nghost;
@@ -502,20 +504,20 @@ namespace ippl {
 
         auto q = *this;
         
-        Field<FT,Dim,M,C> tempField;
+        //Field<FT,Dim,M,C> tempField;
 
-        FieldLayout<Dim>& layout = f.getLayout(); 
-        M& mesh = f.get_mesh();
+        //FieldLayout<Dim>& layout = f.getLayout(); 
+        //M& mesh = f.get_mesh();
 
-        tempField.initialize(mesh, layout);
+        //tempField.initialize(mesh, layout);
 
-        tempField = 0.0;
+        //tempField = 0.0;
         
-        nufft->transform(pp, q, tempField);
+        nufft->transform(pp, q, f);
         
         using view_type = typename Field<FT, Dim, M, C>::view_type;
         view_type fview = f.getView();
-        view_type viewLocal = tempField.getView();
+        //view_type viewLocal = tempField.getView();
         typename Field<ST, Dim, M, C>::view_type Skview = Sk.getView();
         const int nghost = f.getNghost();
         
@@ -531,18 +533,20 @@ namespace ippl {
 	if(nRanksSpace >  1) {
 		//Cray MPI has problems reducing complex data type GPU-aware so do this trick to 
 		//speed up 
-		double* raw_ptr_viewLocal = reinterpret_cast<double*>(viewLocal.data());
+		//double* raw_ptr_viewLocal = reinterpret_cast<double*>(viewLocal.data());
 		double* raw_ptr_fview = reinterpret_cast<double*>(fview.data());
         	int viewSize = fview.extent(0)*fview.extent(1)*fview.extent(2);
         	//MPI_Allreduce(viewLocal.data(), fview.data(), viewSize, 
         	//              MPI_C_DOUBLE_COMPLEX, MPI_SUM, spaceComm);
-        	MPI_Allreduce(raw_ptr_viewLocal, raw_ptr_fview, 2*viewSize, 
-        	              MPI_DOUBLE, MPI_SUM, spaceComm);
+        	//MPI_Allreduce(raw_ptr_viewLocal, raw_ptr_fview, 2*viewSize, 
+        	//              MPI_DOUBLE, MPI_SUM, spaceComm);
+        	MPI_Allreduce(MPI_IN_PLACE, raw_ptr_fview, 2*viewSize, 
+        	              MPI_FLOAT, MPI_SUM, spaceComm);
 		  
 	}
-	else {
-    		Kokkos::deep_copy(fview, viewLocal);
-	}
+	//else {
+    	//	Kokkos::deep_copy(fview, viewLocal);
+	//}
         IpplTimings::stopTimer(scatterAllReducePIFTimer);
 
         IpplTimings::startTimer(scatterPIFNUFFTTimer);
@@ -686,10 +690,10 @@ namespace ippl {
 
 
 
-    template<typename P1, unsigned Dim, class M, class C, typename P2, class... Properties>
+    template<typename P1, unsigned Dim, class M, class C, typename P2, typename P3, class... Properties>
     inline
-    void scatter(const ParticleAttrib<P1, Properties...>& attrib, Field<P1, Dim, M, C>& f,
-                 const ParticleAttrib<Vector<P2, Dim>, Properties...>& pp,
+    void scatter(const ParticleAttrib<P1, Properties...>& attrib, Field<P2, Dim, M, C>& f,
+                 const ParticleAttrib<Vector<P3, Dim>, Properties...>& pp,
                  const MPI_Comm& spaceComm = MPI_COMM_WORLD)
     {
         attrib.scatter(f, pp, spaceComm);
@@ -706,10 +710,10 @@ namespace ippl {
 
 
 
-    template<typename P1, unsigned Dim, class M, class C, typename P2, class... Properties>
+    template<typename P1, unsigned Dim, class M, class C, typename P2, typename P3, class... Properties>
     inline
-    void gather(ParticleAttrib<P1, Properties...>& attrib, Field<P1, Dim, M, C>& f,
-                const ParticleAttrib<Vector<P2, Dim>, Properties...>& pp)
+    void gather(ParticleAttrib<P1, Properties...>& attrib, Field<P2, Dim, M, C>& f,
+                const ParticleAttrib<Vector<P3, Dim>, Properties...>& pp)
     {
         attrib.gather(f, pp);
     }

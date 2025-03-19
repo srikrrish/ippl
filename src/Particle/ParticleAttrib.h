@@ -154,9 +154,9 @@ namespace ippl {
 
         // scatter the data from this attribute onto the given Field, using
         // the given Position attribute
-        template <unsigned Dim, class M, class C, typename P2>
+        template <unsigned Dim, class M, class C, typename P2, typename FT>
         void
-        scatter(Field<T, Dim, M, C>& f,
+        scatter(Field<FT, Dim, M, C>& f,
                 const ParticleAttrib<Vector<P2, Dim>, Properties... >& pp,
                 const MPI_Comm& spaceComm) const;
 
@@ -166,9 +166,9 @@ namespace ippl {
 //                const ParticleAttrib<Vector<P4, Dim>, Properties... >& pp,
 //                const MPI_Comm& spaceComm) const;
 
-        template <unsigned Dim, class M, class C, typename P2>
+        template <unsigned Dim, class M, class C, typename P2, typename FT>
         void
-        gather(Field<T, Dim, M, C>& f,
+        gather(Field<FT, Dim, M, C>& f,
                const ParticleAttrib<Vector<P2, Dim>, Properties...>& pp);
 
 //        template <unsigned Dim, class M, class C, typename P2, typename P3, typename P4>

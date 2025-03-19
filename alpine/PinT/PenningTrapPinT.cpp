@@ -340,7 +340,7 @@ int main(int argc, char *argv[]){
                 MPI_UNSIGNED_LONG, MPI_SUM, spaceComm);
 
     double Q = -1562.5;
-    double Bext = 100.0;
+    double Bext = 5.0;
     Pcoarse = std::make_unique<bunch_type>(PL,hrPIC,rmin,rmax,decomp,Q,Total_particles);
     Pbegin = std::make_unique<states_type>(PL);
     Pend = std::make_unique<states_type>(PL);
@@ -366,34 +366,34 @@ int main(int argc, char *argv[]){
     //Initialize an FFT object for getting rho in real space and 
     //doing charge conservation check
     
-    ippl::ParameterList fftParams;
-    fftParams.add("use_heffte_defaults", false);  
-    fftParams.add("use_pencils", true);  
-    fftParams.add("use_reorder", false);  
-    fftParams.add("use_gpu_aware", true);  
-    fftParams.add("comm", ippl::p2p_pl);  
-    fftParams.add("r2c_direction", 0);  
+    //ippl::ParameterList fftParams;
+    //fftParams.add("use_heffte_defaults", false);  
+    //fftParams.add("use_pencils", true);  
+    //fftParams.add("use_reorder", false);  
+    //fftParams.add("use_gpu_aware", true);  
+    //fftParams.add("comm", ippl::p2p_pl);  
+    //fftParams.add("r2c_direction", 0);  
 
-    ippl::NDIndex<Dim> domainPIFhalf;
+    //ippl::NDIndex<Dim> domainPIFhalf;
 
-    for(unsigned d = 0; d < Dim; ++d) {
-        if(fftParams.template get<int>("r2c_direction") == (int)d)
-            domainPIFhalf[d] = ippl::Index(domainPIF[d].length()/2 + 1);
-        else
-            domainPIFhalf[d] = ippl::Index(domainPIF[d].length());
-    }
-    
+    //for(unsigned d = 0; d < Dim; ++d) {
+    //    if(fftParams.template get<int>("r2c_direction") == (int)d)
+    //        domainPIFhalf[d] = ippl::Index(domainPIF[d].length()/2 + 1);
+    //    else
+    //        domainPIFhalf[d] = ippl::Index(domainPIF[d].length());
+    //}
+    //
 
-    FieldLayout_t FLPIFhalf(domainPIFhalf, decomp);
+    //FieldLayout_t FLPIFhalf(domainPIFhalf, decomp);
 
-    ippl::Vector<double, 3> hDummy = {1.0, 1.0, 1.0};
-    ippl::Vector<double, 3> originDummy = {0.0, 0.0, 0.0};
-    Mesh_t meshPIFhalf(domainPIFhalf, hDummy, originDummy);
+    //ippl::Vector<double, 3> hDummy = {1.0, 1.0, 1.0};
+    //ippl::Vector<double, 3> originDummy = {0.0, 0.0, 0.0};
+    //Mesh_t meshPIFhalf(domainPIFhalf, hDummy, originDummy);
 
-    Pcoarse->rhoPIFreal_m.initialize(meshPIF, FLPIF);
-    Pcoarse->rhoPIFhalf_m.initialize(meshPIFhalf, FLPIFhalf);
+    //Pcoarse->rhoPIFreal_m.initialize(meshPIF, FLPIF);
+    //Pcoarse->rhoPIFhalf_m.initialize(meshPIFhalf, FLPIFhalf);
 
-    Pcoarse->fft_mp = std::make_shared<FFT_t>(FLPIF, FLPIFhalf, fftParams);
+    //Pcoarse->fft_mp = std::make_shared<FFT_t>(FLPIF, FLPIFhalf, fftParams);
    
     ////////////////////////////////////////////////////////////
     
