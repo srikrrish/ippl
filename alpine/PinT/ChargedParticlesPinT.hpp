@@ -49,7 +49,7 @@ typedef ippl::FFTPeriodicPoissonSolver<Vectorfloat_t, float, Dim> Solver_t;
 
 //typedef ippl::FFT<ippl::RCTransform, Dim, double> FFT_t;
 
-const float pi = std::acos(-1.0);
+const double pi = std::acos(-1.0);
 
 // Test programs have to define this variable for VTK dump purposes
 extern const char* TestName;
@@ -232,7 +232,7 @@ public:
 
 
         Kokkos::complex<float> imag = {0.0, 1.0};
-        float pi = std::acos(-1.0);
+        double pi = std::acos(-1.0);
         Kokkos::parallel_reduce("Ez energy and Max",
                               mdrange_type({0, 0, 0},
                                            {N[0],
@@ -319,7 +319,7 @@ public:
 
 
     //    Kokkos::complex<float> imag = {0.0, 1.0};
-    //    float pi = std::acos(-1.0);
+    //    double pi = std::acos(-1.0);
     //    Kokkos::parallel_reduce("Potential energy",
     //                          mdrange_type({0, 0, 0},
     //                                       {N[0],
@@ -511,7 +511,7 @@ public:
         const Mesh_t& mesh = rhoPIF_m.get_mesh();
         const Vector_t& dx = mesh.getMeshSpacing();
         const Vector_t& Len = rmax_m - rmin_m;
-        const float pi = std::acos(-1.0);
+        const double pi = std::acos(-1.0);
         int order = shapedegree_m + 1;
         
         if(shapetype_m == "Gaussian") {

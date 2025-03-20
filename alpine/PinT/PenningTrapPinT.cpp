@@ -62,7 +62,7 @@ struct Newton1D {
 
   float tol = 1e-6;
   int max_iter = 20;
-  float pi = std::acos(-1.0);
+  double pi = std::acos(-1.0);
   
   T mu, sigma, u;
 
@@ -117,7 +117,7 @@ struct generate_random {
 
   T mu, sigma, minU, maxU;
 
-  float pi = std::acos(-1.0);
+  double pi = std::acos(-1.0);
 
   // Initialize all members
   generate_random(view_type x_, view_type v_, GeneratorPool rand_pool_,

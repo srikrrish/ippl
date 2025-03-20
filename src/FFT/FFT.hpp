@@ -901,7 +901,7 @@ namespace ippl {
             Len[d] = dx[d] * N[d];
         }
 
-        const float pi = std::acos(-1.0);
+        const double  pi = std::acos(-1.0);
 
         auto tempField = tempField_m;
         auto tempQ = tempQ_m;
