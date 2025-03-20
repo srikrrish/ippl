@@ -46,11 +46,16 @@ namespace ippl {
             #endif
                 buffer_type buf = buffers_m[id];
                 if (buf->getBufferSize() < size) {
-                    buf->reallocBuffer(size);
+            	    int multiple = (int)(size/2097152) + 1;
+                    //buf->reallocBuffer(size);
+                    buf->reallocBuffer(multiple * 2097152);
                 }
                 return buf;
             }
-            buffers_m[id] = std::make_shared<archive_type>((size_type)(size *
+            //buffers_m[id] = std::make_shared<archive_type>((size_type)(size *
+            //    std::max(overallocation, defaultOveralloc_m)));
+            int multiple = (int)(size/2097152) + 1;
+            buffers_m[id] = std::make_shared<archive_type>((size_type)(multiple * 2097152 *
                 std::max(overallocation, defaultOveralloc_m)));
             return buffers_m[id];
         }
