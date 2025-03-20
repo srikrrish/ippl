@@ -29,7 +29,7 @@
 namespace ippl {
 
     template <typename Tlhs, typename Trhs, unsigned Dim,
-              class M=UniformCartesian<float, Dim>,
+              class M=UniformCartesian<double, Dim>,
               class C=typename M::DefaultCentering>
     class FFTPeriodicPoissonSolver : public Electrostatics<Tlhs, Trhs, Dim, M, C>
     {

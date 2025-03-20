@@ -60,9 +60,9 @@
 template <typename T>
 struct Newton1D {
 
-  float tol = 1e-6;
+  double tol = 1e-12;
   int max_iter = 20;
-  float pi = std::acos(-1.0);
+  double pi = std::acos(-1.0);
   
   T mu, sigma, u;
 
@@ -117,7 +117,7 @@ struct generate_random {
 
   T mu, sigma, minU, maxU;
 
-  float pi = std::acos(-1.0);
+  double pi = std::acos(-1.0);
 
   // Initialize all members
   generate_random(view_type x_, view_type v_, GeneratorPool rand_pool_,
@@ -145,21 +145,21 @@ struct generate_random {
   }
 };
 
-float CDF(const float& x, const float& mu, const float& sigma) {
-   float cdf = 0.5 * (1.0 + std::erf((x - mu)/(sigma * std::sqrt(2))));
+double CDF(const double& x, const double& mu, const double& sigma) {
+   double cdf = 0.5 * (1.0 + std::erf((x - mu)/(sigma * std::sqrt(2))));
    return cdf;
 }
 
-float computeRL2Error(ParticleAttrib<Vector_t>& Q, ParticleAttrib<Vector_t>& QprevIter, 
+double computeRL2Error(ParticleAttrib<Vector_t>& Q, ParticleAttrib<Vector_t>& QprevIter, 
                       Vector_t& length, MPI_Comm& spaceComm) {
     
     auto Qview = Q.getView();
     auto QprevIterView = QprevIter.getView();
-    float localError = 0.0;
-    float localNorm = 0.0;
+    double localError = 0.0;
+    double localNorm = 0.0;
 
     Kokkos::parallel_reduce("Abs. error and norm", Q.size(),
-                            KOKKOS_LAMBDA(const int i, float& valLError, float& valLnorm){
+                            KOKKOS_LAMBDA(const int i, double& valLError, double& valLnorm){
                                 Vector_t diff = Qview(i) - QprevIterView(i);
 
                                 //This is just to undo the effect of periodic BCs during the 
@@ -175,47 +175,47 @@ float computeRL2Error(ParticleAttrib<Vector_t>& Q, ParticleAttrib<Vector_t>& Qpr
                                               +(isRight * (diff[d] - length[d]));
                                 }
 
-                                float myValError = dot(diff, diff).apply();
+                                double myValError = dot(diff, diff).apply();
                                 valLError += myValError;
-                                float myValnorm = dot(Qview(i), Qview(i)).apply();
+                                double myValnorm = dot(Qview(i), Qview(i)).apply();
                                 valLnorm += myValnorm;
-                            }, Kokkos::Sum<float>(localError), Kokkos::Sum<float>(localNorm));
+                            }, Kokkos::Sum<double>(localError), Kokkos::Sum<double>(localNorm));
 
     Kokkos::fence();
-    float globalError = 0.0;
+    double globalError = 0.0;
     MPI_Allreduce(&localError, &globalError, 1, MPI_DOUBLE, MPI_SUM, spaceComm);
-    float globalNorm = 0.0;
+    double globalNorm = 0.0;
     MPI_Allreduce(&localNorm, &globalNorm, 1, MPI_DOUBLE, MPI_SUM, spaceComm);
 
-    float relError = std::sqrt(globalError) / std::sqrt(globalNorm);
+    double relError = std::sqrt(globalError) / std::sqrt(globalNorm);
     
     return relError;
 
 }
 
-float computePL2Error(ParticleAttrib<Vector_t>& Q, ParticleAttrib<Vector_t>& QprevIter, MPI_Comm& spaceComm) {
+double computePL2Error(ParticleAttrib<Vector_t>& Q, ParticleAttrib<Vector_t>& QprevIter, MPI_Comm& spaceComm) {
     
     auto Qview = Q.getView();
     auto QprevIterView = QprevIter.getView();
-    float localError = 0.0;
-    float localNorm = 0.0;
+    double localError = 0.0;
+    double localNorm = 0.0;
 
     Kokkos::parallel_reduce("Abs. error and norm", Q.size(),
-                            KOKKOS_LAMBDA(const int i, float& valLError, float& valLnorm){
+                            KOKKOS_LAMBDA(const int i, double& valLError, double& valLnorm){
                                 Vector_t diff = Qview(i) - QprevIterView(i);
-                                float myValError = dot(diff, diff).apply();
+                                double myValError = dot(diff, diff).apply();
                                 valLError += myValError;
-                                float myValnorm = dot(Qview(i), Qview(i)).apply();
+                                double myValnorm = dot(Qview(i), Qview(i)).apply();
                                 valLnorm += myValnorm;
-                            }, Kokkos::Sum<float>(localError), Kokkos::Sum<float>(localNorm));
+                            }, Kokkos::Sum<double>(localError), Kokkos::Sum<double>(localNorm));
 
     Kokkos::fence();
-    float globalError = 0.0;
+    double globalError = 0.0;
     MPI_Allreduce(&localError, &globalError, 1, MPI_DOUBLE, MPI_SUM, spaceComm);
-    float globalNorm = 0.0;
+    double globalNorm = 0.0;
     MPI_Allreduce(&localNorm, &globalNorm, 1, MPI_DOUBLE, MPI_SUM, spaceComm);
 
-    float relError = std::sqrt(globalError) / std::sqrt(globalNorm);
+    double relError = std::sqrt(globalError) / std::sqrt(globalNorm);
     
     return relError;
 
@@ -272,15 +272,15 @@ int main(int argc, char *argv[]){
     IpplTimings::startTimer(mainTimer);
 
     const size_type totalP = std::atoll(argv[7]);
-    const float tEnd = std::atof(argv[8]);
+    const double tEnd = std::atof(argv[8]);
     const unsigned int nCycles = std::atoi(argv[12]);
-    float tEndCycle = tEnd / nCycles;
-    const float dtSlice = tEndCycle / sizeTime;
-    const float dtFine = std::atof(argv[9]);
-    const float dtCoarse = std::atof(argv[10]);
+    double tEndCycle = tEnd / nCycles;
+    const double dtSlice = tEndCycle / sizeTime;
+    const double dtFine = std::atof(argv[9]);
+    const double dtCoarse = std::atof(argv[10]);
     const unsigned int ntFine = std::ceil(dtSlice / dtFine);
     const unsigned int ntCoarse = std::ceil(dtSlice / dtCoarse);
-    const float tol = std::atof(argv[11]);
+    const double tol = std::atof(argv[11]);
 
     using bunch_type = ChargedParticlesPinT<PLayout_t>;
     using states_type = StatesSlice<PLayout_t>;
@@ -305,9 +305,9 @@ int main(int argc, char *argv[]){
     Vector_t rmin(0.0);
     Vector_t rmax(25.0);
     Vector_t length = rmax - rmin;
-    float dxPIC = length[0] / nrPIC[0];
-    float dyPIC = length[1] / nrPIC[1];
-    float dzPIC = length[2] / nrPIC[2];
+    double dxPIC = length[0] / nrPIC[0];
+    double dyPIC = length[1] / nrPIC[1];
+    double dzPIC = length[2] / nrPIC[2];
 
     Vector_t mu, sd;
 
@@ -318,9 +318,9 @@ int main(int argc, char *argv[]){
     sd[1] = 0.05*20.0;//length[1];
     sd[2] = 0.15*20.0;//length[2];
 
-    float dxPIF = length[0] / nmPIF[0];
-    float dyPIF = length[1] / nmPIF[1];
-    float dzPIF = length[2] / nmPIF[2];
+    double dxPIF = length[0] / nmPIF[0];
+    double dyPIF = length[1] / nmPIF[1];
+    double dzPIF = length[2] / nmPIF[2];
     Vector_t hrPIC = {dxPIC, dyPIC, dzPIC};
     Vector_t hrPIF = {dxPIF, dyPIF, dzPIF};
     Vector_t origin = {rmin[0], rmin[1], rmin[2]};
@@ -339,8 +339,8 @@ int main(int argc, char *argv[]){
     MPI_Allreduce(&nloc, &Total_particles, 1,
                 MPI_UNSIGNED_LONG, MPI_SUM, spaceComm);
 
-    float Q = -1562.5;
-    float Bext = 5.0;
+    double Q = -1562.5;
+    double Bext = 5.0;
     Pcoarse = std::make_unique<bunch_type>(PL,hrPIC,rmin,rmax,decomp,Q,Total_particles);
     Pbegin = std::make_unique<states_type>(PL);
     Pend = std::make_unique<states_type>(PL);
@@ -386,8 +386,8 @@ int main(int argc, char *argv[]){
 
     //FieldLayout_t FLPIFhalf(domainPIFhalf, decomp);
 
-    //ippl::Vector<float, 3> hDummy = {1.0, 1.0, 1.0};
-    //ippl::Vector<float, 3> originDummy = {0.0, 0.0, 0.0};
+    //ippl::Vector<double, 3> hDummy = {1.0, 1.0, 1.0};
+    //ippl::Vector<double, 3> originDummy = {0.0, 0.0, 0.0};
     //Mesh_t meshPIFhalf(domainPIFhalf, hDummy, originDummy);
 
     //Pcoarse->rhoPIFreal_m.initialize(meshPIF, FLPIF);
@@ -423,8 +423,8 @@ int main(int argc, char *argv[]){
    
     IpplTimings::stopTimer(particleCreation);
     
-    float coarseTol = std::atof(argv[17]);
-    float fineTol   = std::atof(argv[18]);
+    double coarseTol = std::atof(argv[17]);
+    double fineTol   = std::atof(argv[18]);
     Pcoarse->initNUFFTs(FLPIF, coarseTol, fineTol);
     std::string coarse = "Coarse";
     std::string fine = "Fine";
@@ -523,7 +523,7 @@ int main(int argc, char *argv[]){
     
     int sign = 1;
     for (unsigned int nc=0; nc < nCycles; nc++) {
-        float tStartMySlice; 
+        double tStartMySlice; 
         bool sendCriteria, recvCriteria;
         bool isConverged = false;
         bool isPreviousDomainConverged = false;
@@ -606,8 +606,8 @@ int main(int argc, char *argv[]){
 
             PL.applyBC(Pend->R, PL.getRegionLayout().getDomain());
             IpplTimings::startTimer(computeErrors);
-            float Rerror = computeRL2Error(Pcoarse->R, Pcoarse->RprevIter, length, spaceComm);
-            float Perror = computePL2Error(Pcoarse->P, Pcoarse->PprevIter, spaceComm);
+            double Rerror = computeRL2Error(Pcoarse->R, Pcoarse->RprevIter, length, spaceComm);
+            double Perror = computePL2Error(Pcoarse->P, Pcoarse->PprevIter, spaceComm);
             IpplTimings::stopTimer(computeErrors);
 
             if((Rerror <= tol) && (Perror <= tol) && isPreviousDomainConverged) {

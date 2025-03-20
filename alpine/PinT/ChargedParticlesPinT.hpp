@@ -23,8 +23,8 @@
 constexpr unsigned Dim = 3;
 
 // some typedefs
-typedef ippl::ParticleSpatialLayout<float,Dim>   PLayout_t;
-typedef ippl::UniformCartesian<float, Dim>        Mesh_t;
+typedef ippl::ParticleSpatialLayout<double,Dim>   PLayout_t;
+typedef ippl::UniformCartesian<double, Dim>        Mesh_t;
 typedef ippl::FieldLayout<Dim> FieldLayout_t;
 
 using size_type = ippl::detail::size_type;
@@ -38,18 +38,18 @@ using Field = ippl::Field<T, Dim>;
 template<typename T>
 using ParticleAttrib = ippl::ParticleAttrib<T>;
 
-typedef Vector<float, Dim>  Vector_t;
-typedef Field<float, Dim>   Field_t;
+typedef Vector<double, Dim>  Vector_t;
+typedef Field<double, Dim>   Field_t;
 typedef Vector<float, Dim>  Vectorfloat_t;
 typedef Field<float, Dim>   Fieldfloat_t;
-typedef Field<Kokkos::complex<float>, Dim>   CxField_t;
+typedef Field<Kokkos::complex<double>, Dim>   CxField_t;
 typedef Field<Vector_t, Dim> VField_t;
 typedef Field<Vectorfloat_t, Dim> VFieldfloat_t;
 typedef ippl::FFTPeriodicPoissonSolver<Vectorfloat_t, float, Dim> Solver_t;
 
 //typedef ippl::FFT<ippl::RCTransform, Dim, double> FFT_t;
 
-const float pi = std::acos(-1.0);
+const double pi = std::acos(-1.0);
 
 // Test programs have to define this variable for VTK dump purposes
 extern const char* TestName;
@@ -74,14 +74,14 @@ public:
     Vector_t rmin_m;
     Vector_t rmax_m;
 
-    float Q_m;
+    double Q_m;
 
     size_type Np_m;
     
     std::shared_ptr<Solver_t> solver_mp;
     //std::shared_ptr<FFT_t> fft_mp;
     
-    float time_m;
+    double time_m;
 
     std::string shapetype_m;
 
@@ -89,11 +89,11 @@ public:
 
     int shapedegree_m;
 
-    std::shared_ptr<ippl::FFT<ippl::NUFFTransform, 3, float>> nufftType1Fine_mp,nufftType2Fine_mp,
+    std::shared_ptr<ippl::FFT<ippl::NUFFTransform, 3, double>> nufftType1Fine_mp,nufftType2Fine_mp,
                                                                nufftType1Coarse_mp,nufftType2Coarse_mp;
 
 public:
-    ParticleAttrib<float>     q; // charge
+    ParticleAttrib<double>     q; // charge
     typename ippl::ParticleBase<PLayout>::particle_position_type P;  // G(P^(k)_n)
     typename ippl::ParticleBase<PLayout>::particle_position_type E;  // electric field at particle position
 
@@ -127,7 +127,7 @@ public:
                      Vector_t rmin,
                      Vector_t rmax,
                      ippl::e_dim_tag decomp[Dim],
-                     float Q,
+                     double Q,
                      size_type Np)
     : ippl::ParticleBase<PLayout>(pl)
     , hr_m(hr)
@@ -176,8 +176,8 @@ public:
     }
 
 
-    void initNUFFTs(FieldLayout_t& FLPIF, float& coarseTol,
-                    float& fineTol) {
+    void initNUFFTs(FieldLayout_t& FLPIF, double& coarseTol,
+                    double& fineTol) {
         
         ippl::ParameterList fftCoarseParams,fftFineParams;
 
@@ -202,17 +202,17 @@ public:
         fftFineParams.add("use_cufinufft_defaults", false);
         fftCoarseParams.add("use_cufinufft_defaults", false);
         
-        nufftType1Fine_mp = std::make_shared<ippl::FFT<ippl::NUFFTransform, 3, float>>(FLPIF, this->getLocalNum(), 1, fftFineParams);
-        nufftType2Fine_mp = std::make_shared<ippl::FFT<ippl::NUFFTransform, 3, float>>(FLPIF, this->getLocalNum(), 2, fftFineParams);
+        nufftType1Fine_mp = std::make_shared<ippl::FFT<ippl::NUFFTransform, 3, double>>(FLPIF, this->getLocalNum(), 1, fftFineParams);
+        nufftType2Fine_mp = std::make_shared<ippl::FFT<ippl::NUFFTransform, 3, double>>(FLPIF, this->getLocalNum(), 2, fftFineParams);
 
-        nufftType1Coarse_mp = std::make_shared<ippl::FFT<ippl::NUFFTransform, 3, float>>(FLPIF, this->getLocalNum(), 1, fftCoarseParams);
-        nufftType2Coarse_mp = std::make_shared<ippl::FFT<ippl::NUFFTransform, 3, float>>(FLPIF, this->getLocalNum(), 2, fftCoarseParams);
+        nufftType1Coarse_mp = std::make_shared<ippl::FFT<ippl::NUFFTransform, 3, double>>(FLPIF, this->getLocalNum(), 1, fftCoarseParams);
+        nufftType2Coarse_mp = std::make_shared<ippl::FFT<ippl::NUFFTransform, 3, double>>(FLPIF, this->getLocalNum(), 2, fftCoarseParams);
     }
     
     void dumpFieldEnergy(const unsigned int& nc, const unsigned int& iter, int rankTime, int rankSpace) {
        
-        float fieldEnergy = 0.0; 
-        float EzAmp = 0.0;
+        double fieldEnergy = 0.0; 
+        double EzAmp = 0.0;
 
         auto rhoview = rhoPIF_m.getView();
         const int nghost = rhoPIF_m.getNghost();
@@ -220,9 +220,9 @@ public:
       
         const FieldLayout_t& layout = rhoPIF_m.getLayout(); 
         const Mesh_t& mesh = rhoPIF_m.get_mesh();
-        const Vector<float, Dim>& dx = mesh.getMeshSpacing();
+        const Vector<double, Dim>& dx = mesh.getMeshSpacing();
         const auto& domain = layout.getDomain();
-        Vector<float, Dim> Len;
+        Vector<double, Dim> Len;
         Vector<int, Dim> N;
 
         for (unsigned d=0; d < Dim; ++d) {
@@ -231,8 +231,8 @@ public:
         }
 
 
-        Kokkos::complex<float> imag = {0.0, 1.0};
-        float pi = std::acos(-1.0);
+        Kokkos::complex<double> imag = {0.0, 1.0};
+        double pi = std::acos(-1.0);
         Kokkos::parallel_reduce("Ez energy and Max",
                               mdrange_type({0, 0, 0},
                                            {N[0],
@@ -241,35 +241,35 @@ public:
                               KOKKOS_LAMBDA(const int i,
                                             const int j,
                                             const int k,
-                                            float& tlSum,
-                                            float& tlMax)
+                                            double& tlSum,
+                                            double& tlMax)
         {
         
             Vector<int, 3> iVec = {i, j, k};
-            Vector<float, 3> kVec;
-            float Dr = 0.0;
+            Vector<double, 3> kVec;
+            double Dr = 0.0;
             for(size_t d = 0; d < Dim; ++d) {
                 kVec[d] = 2 * pi / Len[d] * (iVec[d] - (N[d] / 2));
                 Dr += kVec[d] * kVec[d];
             }
 
-            Kokkos::complex<float> Ek = {0.0, 0.0}; 
+            Kokkos::complex<double> Ek = {0.0, 0.0}; 
             bool isNotZero = (Dr != 0.0);
-            float factor = isNotZero * (1.0 / (Dr + ((!isNotZero) * 1.0))); 
+            double factor = isNotZero * (1.0 / (Dr + ((!isNotZero) * 1.0))); 
             Ek = -(imag * kVec[2] * rhoview(i+nghost,j+nghost,k+nghost) * factor);
-            float myVal = Ek.real() * Ek.real() + Ek.imag() * Ek.imag();
+            double myVal = Ek.real() * Ek.real() + Ek.imag() * Ek.imag();
 
             tlSum += myVal;
 
-            float myValMax = std::sqrt(myVal);
+            double myValMax = std::sqrt(myVal);
 
             if(myValMax > tlMax) tlMax = myValMax;
 
-        }, Kokkos::Sum<float>(fieldEnergy), Kokkos::Max<float>(EzAmp));
+        }, Kokkos::Sum<double>(fieldEnergy), Kokkos::Max<double>(EzAmp));
         
 
         Kokkos::fence();
-        float volume = (rmax_m[0] - rmin_m[0]) * (rmax_m[1] - rmin_m[1]) * (rmax_m[2] - rmin_m[2]);
+        double volume = (rmax_m[0] - rmin_m[0]) * (rmax_m[1] - rmin_m[1]) * (rmax_m[2] - rmin_m[2]);
         fieldEnergy *= volume;
 
 
@@ -298,8 +298,8 @@ public:
     //void dumpEnergy(const unsigned int& nc, const unsigned int& iter, ParticleAttrib<Vector_t>& Ptemp,
     //                int rankTime, int rankSpace, const MPI_Comm& spaceComm = MPI_COMM_WORLD) {
 
-    //    float potentialEnergy, kineticEnergy;
-    //    float temp = 0.0;
+    //    double potentialEnergy, kineticEnergy;
+    //    double temp = 0.0;
 
     //    auto rhoview = rhoPIF_m.getView();
     //    const int nghost = rhoPIF_m.getNghost();
@@ -307,9 +307,9 @@ public:
     //  
     //    const FieldLayout_t& layout = rhoPIF_m.getLayout(); 
     //    const Mesh_t& mesh = rhoPIF_m.get_mesh();
-    //    const Vector<float, Dim>& dx = mesh.getMeshSpacing();
+    //    const Vector<double, Dim>& dx = mesh.getMeshSpacing();
     //    const auto& domain = layout.getDomain();
-    //    Vector<float, Dim> Len;
+    //    Vector<double, Dim> Len;
     //    Vector<int, Dim> N;
 
     //    for (unsigned d=0; d < Dim; ++d) {
@@ -318,8 +318,8 @@ public:
     //    }
 
 
-    //    Kokkos::complex<float> imag = {0.0, 1.0};
-    //    float pi = std::acos(-1.0);
+    //    Kokkos::complex<double> imag = {0.0, 1.0};
+    //    double pi = std::acos(-1.0);
     //    Kokkos::parallel_reduce("Potential energy",
     //                          mdrange_type({0, 0, 0},
     //                                       {N[0],
@@ -328,32 +328,32 @@ public:
     //                          KOKKOS_LAMBDA(const int i,
     //                                        const int j,
     //                                        const int k,
-    //                                        float& valL)
+    //                                        double& valL)
     //    {
     //    
     //        Vector<int, 3> iVec = {i, j, k};
-    //        Vector<float, 3> kVec;
-    //        float Dr = 0.0;
+    //        Vector<double, 3> kVec;
+    //        double Dr = 0.0;
     //        for(size_t d = 0; d < Dim; ++d) {
     //            kVec[d] = 2 * pi / Len[d] * (iVec[d] - (N[d] / 2));
     //            Dr += kVec[d] * kVec[d];
     //        }
 
-    //        Kokkos::complex<float> Ek = {0.0, 0.0}; 
-    //        float myVal = 0.0;
+    //        Kokkos::complex<double> Ek = {0.0, 0.0}; 
+    //        double myVal = 0.0;
     //        auto rho = rhoview(i+nghost,j+nghost,k+nghost);
     //        for(size_t d = 0; d < Dim; ++d) {
     //            bool isNotZero = (Dr != 0.0);
-    //            float factor = isNotZero * (1.0 / (Dr + ((!isNotZero) * 1.0))); 
+    //            double factor = isNotZero * (1.0 / (Dr + ((!isNotZero) * 1.0))); 
     //            Ek = -(imag * kVec[d] * rho * factor);
     //            myVal += Ek.real() * Ek.real() + Ek.imag() * Ek.imag();
     //        }
 
     //        valL += myVal;
 
-    //    }, Kokkos::Sum<float>(temp));
+    //    }, Kokkos::Sum<double>(temp));
 
-    //    float volume = (rmax_m[0] - rmin_m[0]) * (rmax_m[1] - rmin_m[1]) * (rmax_m[2] - rmin_m[2]);
+    //    double volume = (rmax_m[0] - rmin_m[0]) * (rmax_m[1] - rmin_m[1]) * (rmax_m[2] - rmin_m[2]);
     //    potentialEnergy = 0.5 * temp * volume;
 
     //    auto Pview = Ptemp.getView();
@@ -362,14 +362,14 @@ public:
     //    temp = 0.0;
 
     //    Kokkos::parallel_reduce("Kinetic Energy", this->getLocalNum(),
-    //                            KOKKOS_LAMBDA(const int i, float& valL){
-    //                                float myVal = dot(Pview(i), Pview(i)).apply();
+    //                            KOKKOS_LAMBDA(const int i, double& valL){
+    //                                double myVal = dot(Pview(i), Pview(i)).apply();
     //                                myVal *= -qView(i); //q/(q/m) where q/m=-1
     //                                valL += myVal;
-    //                            }, Kokkos::Sum<float>(temp));
+    //                            }, Kokkos::Sum<double>(temp));
 
     //    temp *= 0.5;
-    //    float globaltemp = 0.0;
+    //    double globaltemp = 0.0;
     //    MPI_Allreduce(&temp, &globaltemp, 1, MPI_DOUBLE, MPI_SUM, spaceComm);
 
     //    kineticEnergy = globaltemp;
@@ -422,27 +422,27 @@ public:
     //                          KOKKOS_LAMBDA(const int i,
     //                                        const int j,
     //                                        const int k,
-    //                                        float& valL)
+    //                                        double& valL)
     //    {
     //        valL += rhoPIFrealview(i+nghost, j+nghost, k+nghost);
-    //    }, Kokkos::Sum<float>(temp));
+    //    }, Kokkos::Sum<double>(temp));
 
-    //    float chargeTotal = temp;
+    //    double chargeTotal = temp;
 
     //    Vector_t totalMomentum = 0.0;
     //    
     //    for(size_t d = 0; d < Dim; ++d) {
-    //         float tempD = 0.0;
+    //         double tempD = 0.0;
     //         Kokkos::parallel_reduce("Total Momentum", this->getLocalNum(),
-    //                            KOKKOS_LAMBDA(const int i, float& valL){
+    //                            KOKKOS_LAMBDA(const int i, double& valL){
     //                                valL  += (-qView(i)) * Pview(i)[d];
-    //                            }, Kokkos::Sum<float>(tempD));
+    //                            }, Kokkos::Sum<double>(tempD));
     //         totalMomentum[d] = tempD;
     //    }
     //    
     //    Vector_t globalMom;
 
-    //    float magMomentum = 0.0;
+    //    double magMomentum = 0.0;
     //    for(size_t d = 0; d < Dim; ++d) {
     //        MPI_Allreduce(&totalMomentum[d], &globalMom[d], 1, MPI_DOUBLE, MPI_SUM, spaceComm);
     //        magMomentum += globalMom[d] * globalMom[d];
@@ -477,7 +477,7 @@ public:
 
     //}
     
-    void writelocalError(float Rerror, float Perror, unsigned int nc, unsigned int iter, int rankTime, int rankSpace) {
+    void writelocalError(double Rerror, double Perror, unsigned int nc, unsigned int iter, int rankTime, int rankSpace) {
         
         if(rankSpace == 0) {
             std::stringstream fname;
@@ -511,7 +511,7 @@ public:
         const Mesh_t& mesh = rhoPIF_m.get_mesh();
         const Vector_t& dx = mesh.getMeshSpacing();
         const Vector_t& Len = rmax_m - rmin_m;
-        const float pi = std::acos(-1.0);
+        const double pi = std::acos(-1.0);
         int order = shapedegree_m + 1;
         
         if(shapetype_m == "Gaussian") {
@@ -531,14 +531,14 @@ public:
             {
                 
                 Vector<int, 3> iVec = {i, j, k};
-                Vector<float, 3> kVec;
-                float Sk = 1.0;
+                Vector<double, 3> kVec;
+                double Sk = 1.0;
                 for(size_t d = 0; d < Dim; ++d) {
                     kVec[d] = 2 * pi / Len[d] * (iVec[d] - (N[d] / 2));
-                    float khbytwo = kVec[d] * dx[d] / 2;
+                    double khbytwo = kVec[d] * dx[d] / 2;
                     bool isNotZero = (khbytwo != 0.0);
-                    float factor = (1.0 / (khbytwo + ((!isNotZero) * 1.0)));
-                    float arg = isNotZero * (Kokkos::sin(khbytwo) * factor) + 
+                    double factor = (1.0 / (khbytwo + ((!isNotZero) * 1.0)));
+                    double arg = isNotZero * (Kokkos::sin(khbytwo) * factor) + 
                                  (!isNotZero) * 1.0;
                     //Fourier transform of CIC
                     Sk *= std::pow(arg, order);
@@ -555,7 +555,7 @@ public:
 
     void LeapFrogPIC(ParticleAttrib<Vector_t>& Rtemp, 
                      ParticleAttrib<Vector_t>& Ptemp, const unsigned int nt, 
-                     const float dt, const float& tStartMySlice, MPI_Comm& spaceComm) {
+                     const double dt, const double& tStartMySlice, MPI_Comm& spaceComm) {
     
         static IpplTimings::TimerRef fieldSolvePIC = IpplTimings::getTimer("fieldSolvePIC");
         PLayout& PL = this->getLayout();
@@ -608,7 +608,7 @@ public:
     }
 
     void BorisPIC(ParticleAttrib<Vector_t>& Rtemp, ParticleAttrib<Vector_t>& Ptemp, const unsigned int nt, 
-                  const float dt, const float& tStartMySlice, const float& Bext, MPI_Comm& spaceComm) {
+                  const double dt, const double& tStartMySlice, const double& Bext, MPI_Comm& spaceComm) {
     
         static IpplTimings::TimerRef fieldSolvePIC = IpplTimings::getTimer("fieldSolvePIC");
         PLayout& PL = this->getLayout();
@@ -628,8 +628,8 @@ public:
     
         time_m = tStartMySlice;
 
-        float alpha = -0.5 * dt;
-        float DrInv = 1.0 / (1 + (std::pow((alpha * Bext), 2)));
+        double alpha = -0.5 * dt;
+        double DrInv = 1.0 / (1 + (std::pow((alpha * Bext), 2)));
         Vector_t rmax = rmax_m;
 
         for (unsigned int it=0; it<nt; it++) {
@@ -645,12 +645,12 @@ public:
             auto Rview = Rtemp.getView();
             auto Pview = Ptemp.getView();
             auto Eview = E.getView();
-            float V0 = 30*rmax[2];
+            double V0 = 30*rmax[2];
             Kokkos::parallel_for("Kick1", this->getLocalNum(),
                                   KOKKOS_LAMBDA(const size_t j){
-                float Eext_x = -(Rview(j)[0] - 0.5*rmax[0]) * (V0/(2*std::pow(rmax[2],2)));
-                float Eext_y = -(Rview(j)[1] - 0.5*rmax[1]) * (V0/(2*std::pow(rmax[2],2)));
-                float Eext_z =  (Rview(j)[2] - 0.5*rmax[2]) * (V0/(std::pow(rmax[2],2)));
+                double Eext_x = -(Rview(j)[0] - 0.5*rmax[0]) * (V0/(2*std::pow(rmax[2],2)));
+                double Eext_y = -(Rview(j)[1] - 0.5*rmax[1]) * (V0/(2*std::pow(rmax[2],2)));
+                double Eext_z =  (Rview(j)[2] - 0.5*rmax[2]) * (V0/(std::pow(rmax[2],2)));
 
                 Eext_x += Eview(j)[0];
                 Eext_y += Eview(j)[1];
@@ -688,9 +688,9 @@ public:
             auto E2view = E.getView();
             Kokkos::parallel_for("Kick2", this->getLocalNum(),
                                   KOKKOS_LAMBDA(const size_t j){
-                float Eext_x = -(R2view(j)[0] - 0.5*rmax[0]) * (V0/(2*std::pow(rmax[2],2)));
-                float Eext_y = -(R2view(j)[1] - 0.5*rmax[1]) * (V0/(2*std::pow(rmax[2],2)));
-                float Eext_z =  (R2view(j)[2] - 0.5*rmax[2]) * (V0/(std::pow(rmax[2],2)));
+                double Eext_x = -(R2view(j)[0] - 0.5*rmax[0]) * (V0/(2*std::pow(rmax[2],2)));
+                double Eext_y = -(R2view(j)[1] - 0.5*rmax[1]) * (V0/(2*std::pow(rmax[2],2)));
+                double Eext_z =  (R2view(j)[2] - 0.5*rmax[2]) * (V0/(std::pow(rmax[2],2)));
          
                 Eext_x += E2view(j)[0];
                 Eext_y += E2view(j)[1];
@@ -710,7 +710,7 @@ public:
 
     void LeapFrogPIF(ParticleAttrib<Vector_t>& Rtemp,
                      ParticleAttrib<Vector_t>& Ptemp, const unsigned int& nt, 
-                     const float& dt, const float& tStartMySlice, const unsigned& nc, 
+                     const double& dt, const double& tStartMySlice, const unsigned& nc, 
                      const unsigned int& iter, int rankTime, int rankSpace,
                      const std::string& propagator, MPI_Comm& spaceComm) {
     
@@ -795,8 +795,8 @@ public:
 
     void BorisPIF(ParticleAttrib<Vector_t>& Rtemp,
                      ParticleAttrib<Vector_t>& Ptemp, const unsigned int& nt, 
-                     const float& dt, const float& tStartMySlice, const unsigned& /*nc*/, 
-                     const unsigned int& /*iter*/, const float& Bext,
+                     const double& dt, const double& tStartMySlice, const unsigned& /*nc*/, 
+                     const unsigned int& /*iter*/, const double& Bext,
                      int /*rankTime*/, int /*rankSpace*/,
                      const std::string& propagator, MPI_Comm& spaceComm) {
     
@@ -829,8 +829,8 @@ public:
         //    dumpEnergy(nc, iter, Ptemp, rankTime, rankSpace, spaceComm);
         //    IpplTimings::stopTimer(dumpData);
         //}
-        float alpha = -0.5 * dt;
-        float DrInv = 1.0 / (1 + (std::pow((alpha * Bext), 2)));
+        double alpha = -0.5 * dt;
+        double DrInv = 1.0 / (1 + (std::pow((alpha * Bext), 2)));
         Vector_t rmax = rmax_m;
         for (unsigned int it=0; it<nt; it++) {
     
@@ -845,12 +845,12 @@ public:
             auto Rview = Rtemp.getView();
             auto Pview = Ptemp.getView();
             auto Eview = E.getView();
-            float V0 = 30*rmax[2];
+            double V0 = 30*rmax[2];
             Kokkos::parallel_for("Kick1", this->getLocalNum(),
                                   KOKKOS_LAMBDA(const size_t j){
-                float Eext_x = -(Rview(j)[0] - 0.5*rmax[0]) * (V0/(2*std::pow(rmax[2],2)));
-                float Eext_y = -(Rview(j)[1] - 0.5*rmax[1]) * (V0/(2*std::pow(rmax[2],2)));
-                float Eext_z =  (Rview(j)[2] - 0.5*rmax[2]) * (V0/(std::pow(rmax[2],2)));
+                double Eext_x = -(Rview(j)[0] - 0.5*rmax[0]) * (V0/(2*std::pow(rmax[2],2)));
+                double Eext_y = -(Rview(j)[1] - 0.5*rmax[1]) * (V0/(2*std::pow(rmax[2],2)));
+                double Eext_z =  (Rview(j)[2] - 0.5*rmax[2]) * (V0/(std::pow(rmax[2],2)));
 
                 Eext_x += Eview(j)[0];
                 Eext_y += Eview(j)[1];
@@ -893,9 +893,9 @@ public:
             auto E2view = E.getView();
             Kokkos::parallel_for("Kick2", this->getLocalNum(),
                                   KOKKOS_LAMBDA(const size_t j){
-                float Eext_x = -(R2view(j)[0] - 0.5*rmax[0]) * (V0/(2*std::pow(rmax[2],2)));
-                float Eext_y = -(R2view(j)[1] - 0.5*rmax[1]) * (V0/(2*std::pow(rmax[2],2)));
-                float Eext_z =  (R2view(j)[2] - 0.5*rmax[2]) * (V0/(std::pow(rmax[2],2)));
+                double Eext_x = -(R2view(j)[0] - 0.5*rmax[0]) * (V0/(2*std::pow(rmax[2],2)));
+                double Eext_y = -(R2view(j)[1] - 0.5*rmax[1]) * (V0/(2*std::pow(rmax[2],2)));
+                double Eext_z =  (R2view(j)[2] - 0.5*rmax[2]) * (V0/(std::pow(rmax[2],2)));
 
                 Eext_x += E2view(j)[0];
                 Eext_y += E2view(j)[1];
