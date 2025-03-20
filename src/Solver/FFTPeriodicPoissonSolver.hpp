@@ -44,8 +44,8 @@ namespace ippl {
 
         layoutComplex_mp = std::make_shared<Layout_t>(domainComplex, decomp);
 
-        Vector<double, 3> hComplex = {1.0, 1.0, 1.0};
-        Vector<double, 3> originComplex = {0.0, 0.0, 0.0};
+        Vector<float, 3> hComplex = {1.0, 1.0, 1.0};
+        Vector<float, 3> originComplex = {0.0, 0.0, 0.0};
         M meshComplex(domainComplex, hComplex, originComplex);
 
         fieldComplex_m.initialize(meshComplex, *layoutComplex_mp);
@@ -67,7 +67,7 @@ namespace ippl {
         using mdrange_type = Kokkos::MDRangePolicy<Kokkos::Rank<Dim>>;
 
 
-        double pi = std::acos(-1.0);
+        float pi = std::acos(-1.0);
         const M& mesh = this->rhs_mp->get_mesh();
         const auto& lDomComplex = layoutComplex_mp->getLocalNDIndex();
         using vector_type = typename M::vector_type;
@@ -106,16 +106,16 @@ namespace ippl {
                   Vector_t kVec;
 
                   for(size_t d = 0; d < Dim; ++d) {
-                      const double Len = rmax[d] - origin[d];
+                      const float Len = rmax[d] - origin[d];
                       bool shift = (iVec[d] > (N[d]/2));
                       kVec[d] = 2 * pi / Len * (iVec[d] - shift * N[d]);
                   }
 
-                  double Dr = kVec[0] * kVec[0] +
+                  float Dr = kVec[0] * kVec[0] +
                               kVec[1] * kVec[1] + kVec[2] * kVec[2];
                   
                   bool isNotZero = (Dr != 0.0);
-                  double factor = isNotZero * (1.0 / (Dr + ((!isNotZero) * 1.0))); 
+                  float factor = isNotZero * (1.0 / (Dr + ((!isNotZero) * 1.0))); 
                   
                   view(i, j, k) *= factor;
               });
@@ -128,7 +128,7 @@ namespace ippl {
                 //Compute gradient in Fourier space and then
                 //take inverse FFT.
 
-                Kokkos::complex<double> imag = {0.0, 1.0};
+                Kokkos::complex<float> imag = {0.0, 1.0};
                 auto tempview = tempFieldComplex_m.getView();
                 auto viewRhs = this->rhs_mp->getView();
                 auto viewLhs = this->lhs_mp->getView();
@@ -154,7 +154,7 @@ namespace ippl {
                         Vector_t kVec;
 
                         for(size_t d = 0; d < Dim; ++d) {
-                            const double Len = rmax[d] - origin[d];
+                            const float Len = rmax[d] - origin[d];
                             bool shift = (iVec[d] > (N[d]/2));
                             bool notMid = (iVec[d] != (N[d]/2));
                             //For the noMid part see 
@@ -162,13 +162,13 @@ namespace ippl {
                             kVec[d] = notMid * 2 * pi / Len * (iVec[d] - shift * N[d]);
                         }
 
-                        double Dr = kVec[0] * kVec[0] +
+                        float Dr = kVec[0] * kVec[0] +
                                     kVec[1] * kVec[1] + kVec[2] * kVec[2];
 
                         tempview(i, j, k) = view(i, j, k);
                         
                         bool isNotZero = (Dr != 0.0);
-                        double factor = isNotZero * (1.0 / (Dr + ((!isNotZero) * 1.0))); 
+                        float factor = isNotZero * (1.0 / (Dr + ((!isNotZero) * 1.0))); 
                         
                         tempview(i, j, k) *= -(imag * kVec[gd] * factor);
                     });

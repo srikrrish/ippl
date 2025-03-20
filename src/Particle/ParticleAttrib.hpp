@@ -178,8 +178,8 @@ namespace ippl {
                 // find nearest grid point
                 vector_type l = (pp(idx) - origin) * invdx + 0.5;
                 Vector<int, Dim> index = l;
-                Vector<double, Dim> whi = l - index;
-                Vector<double, Dim> wlo = 1.0 - whi;
+                Vector<float, Dim> whi = l - index;
+                Vector<float, Dim> wlo = 1.0 - whi;
 
                 const int i = index[0] - lDom[0].first() + nghost;
                 const int j = index[1] - lDom[1].first() + nghost;
@@ -535,14 +535,14 @@ namespace ippl {
 		//Cray MPI has problems reducing complex data type GPU-aware so do this trick to 
 		//speed up 
 		//double* raw_ptr_viewLocal = reinterpret_cast<double*>(viewLocal.data());
-		double* raw_ptr_fview = reinterpret_cast<double*>(fview.data());
+		float* raw_ptr_fview = reinterpret_cast<float*>(fview.data());
         	int viewSize = fview.extent(0)*fview.extent(1)*fview.extent(2);
         	//MPI_Allreduce(viewLocal.data(), fview.data(), viewSize, 
         	//              MPI_C_DOUBLE_COMPLEX, MPI_SUM, spaceComm);
         	//MPI_Allreduce(raw_ptr_viewLocal, raw_ptr_fview, 2*viewSize, 
         	//              MPI_DOUBLE, MPI_SUM, spaceComm);
         	MPI_Allreduce(MPI_IN_PLACE, raw_ptr_fview, 2*viewSize, 
-        	              MPI_DOUBLE, MPI_SUM, spaceComm);
+        	              MPI_FLOAT, MPI_SUM, spaceComm);
 		  
 	}
 	//else {
@@ -604,8 +604,8 @@ namespace ippl {
         }
 
 
-        double pi = std::acos(-1.0);
-        Kokkos::complex<double> imag = {0.0, 1.0};
+        float pi = std::acos(-1.0);
+        Kokkos::complex<float> imag = {0.0, 1.0};
         size_t Np = *(this->localNum_mp);
 
         
@@ -622,9 +622,9 @@ namespace ippl {
                                               const int k)
             {
                 Vector<int, 3> iVec = {i-nghost, j-nghost, k-nghost};
-                Vector<double, 3> kVec;
+                Vector<float, 3> kVec;
 
-                double Dr = 0.0;
+                float Dr = 0.0;
                 for(size_t d = 0; d < Dim; ++d) {
                     kVec[d] = 2 * pi / Len[d] * (iVec[d] - (N[d] / 2));
                     Dr += kVec[d] * kVec[d];
@@ -633,7 +633,7 @@ namespace ippl {
                 tempview(i, j, k) = fview(i, j, k);
                 
                 bool isNotZero = (Dr != 0.0);
-                double factor = isNotZero * (1.0 / (Dr + ((!isNotZero) * 1.0))); 
+                float factor = isNotZero * (1.0 / (Dr + ((!isNotZero) * 1.0))); 
                 
                 tempview(i, j, k) *= -Skview(i, j, k) * (imag * kVec[gd] * factor);
             });
