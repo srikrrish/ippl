@@ -40,16 +40,16 @@ namespace ippl {
             //  is applied
             size_t dim_m;
             //! Minimum and maximum coordinates of the domain along the given dimension
-            double minval_m;
-            double maxval_m;
+            float minval_m;
+            float maxval_m;
             //! Whether the boundary conditions are being applied for an upper
             //  face (i.e. with greater coordinate values)
             bool isUpper_m;
 
             //! The length of the domain along the given dimension
-            double extent_m;
+            float extent_m;
             //! The coordinate of the midpoint of the domain along the given dimension
-            double middle_m;
+            float middle_m;
 
             KOKKOS_DEFAULTED_FUNCTION
             ParticleBC() = default;
