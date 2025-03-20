@@ -176,8 +176,8 @@ public:
         fftParams1.add("gpu_sort", 0);
         fftParams1.add("gpu_kerevalmeth", 1);
         fftParams1.add("tolerance", tol);
-        fftParams1.add("gpu_binsizex", 16);
-        fftParams1.add("gpu_binsizey", 16);
+        fftParams1.add("gpu_binsizex", 8);
+        fftParams1.add("gpu_binsizey", 8);
         fftParams1.add("gpu_binsizez", 2);
         fftParams1.add("gpu_maxsubprobsize", 1024);
 
@@ -187,8 +187,8 @@ public:
         fftParams2.add("gpu_sort", 0);
         fftParams2.add("gpu_kerevalmeth", 1);
         fftParams2.add("tolerance", tol);
-        fftParams2.add("gpu_binsizex", 16);
-        fftParams2.add("gpu_binsizey", 16);
+        fftParams2.add("gpu_binsizex", 8);
+        fftParams2.add("gpu_binsizey", 8);
         fftParams2.add("gpu_binsizez", 2);
         fftParams2.add("gpu_maxsubprobsize", 1024);
 
