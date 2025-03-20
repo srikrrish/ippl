@@ -536,9 +536,10 @@ namespace ippl {
 		//speed up 
 		//double* raw_ptr_viewLocal = reinterpret_cast<double*>(viewLocal.data());
 		float* raw_ptr_fview = reinterpret_cast<float*>(fview.data());
+		//double* raw_ptr_fview = reinterpret_cast<double*>(fview.data());
         	int viewSize = fview.extent(0)*fview.extent(1)*fview.extent(2);
-        	//MPI_Allreduce(viewLocal.data(), fview.data(), viewSize, 
-        	//              MPI_C_DOUBLE_COMPLEX, MPI_SUM, spaceComm);
+        	//MPI_Allreduce(MPI_IN_PLACE, fview.data(), viewSize, 
+        	//              MPI_C_FLOAT_COMPLEX, MPI_SUM, spaceComm);
         	//MPI_Allreduce(raw_ptr_viewLocal, raw_ptr_fview, 2*viewSize, 
         	//              MPI_DOUBLE, MPI_SUM, spaceComm);
         	MPI_Allreduce(MPI_IN_PLACE, raw_ptr_fview, 2*viewSize, 
