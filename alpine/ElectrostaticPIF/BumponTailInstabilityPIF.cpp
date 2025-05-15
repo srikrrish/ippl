@@ -294,7 +294,8 @@ int main(int argc, char *argv[]){
     P->rhoPIFreal_m.initialize(mesh, FL);
     P->rhoPIFhalf_m.initialize(meshPIFhalf, FLPIFhalf);
 
-    P->fft_mp = std::make_shared<FFT_t>(FL, FLPIFhalf, fftParams);
+    //P->fft_mp = std::make_shared<FFT_t>(FL, FLPIFhalf, fftParams);
+    P->fft_mp = std::make_shared<FFT_t>(FLPIFhalf, fftParams);
    
     ////////////////////////////////////////////////////////////
 
