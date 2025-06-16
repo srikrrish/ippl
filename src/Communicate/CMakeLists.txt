@@ -6,6 +6,7 @@ set (_SRCS
 set (_HDRS
     Archive.h
     Archive.hpp
+    Buffers.hpp
     Communicate.h
     DataTypes.h
 #     GlobalComm.hpp
