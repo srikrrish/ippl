@@ -88,12 +88,6 @@ namespace ippl {
                 return buffer_m.data();
             }
 
-            /*!
-             * Sets an external buffer to buffer_m
-             */
-            void setBuffer(void *buffer) {
-                buffer_m.data() = (pointer_type)buffer;
-            }
 
             /*!
              * @returns the size of the buffer
