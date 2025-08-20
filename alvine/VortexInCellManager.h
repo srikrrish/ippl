@@ -79,8 +79,6 @@ public:
             this->fcontainer_m->getMesh(), this->fcontainer_m->getFL()));
         
       this->fcontainer_m->initializeFields();
-      
-      this->fcontainer_m->setOmegaBCs();
 
       this->setFieldSolver( std::make_shared<FieldSolver_t>( this->solver_m, &this->fcontainer_m->getOmegaField()) );
       
