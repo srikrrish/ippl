@@ -36,16 +36,16 @@ protected:
     bool isAllPeriodic_m;
     ippl::NDIndex<Dim> domain_m;
     std::string solver_m;
-    double lbt_m;
+    int dump_freq_m;
 
 public:
-    AlvineManager(unsigned nt_, Vector_t<int, Dim>& nr_, unsigned np_, std::string& solver_, double lbt_)
+    AlvineManager(unsigned nt_, Vector_t<int, Dim>& nr_, unsigned np_, std::string& solver_, int dump_freq_)
         : ippl::PicManager<T, Dim, ParticleContainer<T, Dim>, FieldContainer<T, Dim>, LoadBalancer<T, Dim>>() 
         , nt_m(nt_)
         , nr_m(nr_)
         , np_m(np_)
         , solver_m(solver_)
-        , lbt_m(lbt_) {}
+	, dump_freq_m(dump_freq_) {}
 
     ~AlvineManager(){}
 
@@ -77,7 +77,9 @@ public:
       this->time_m += this->dt_m;
       this->it_m++;
 
-      this->dump();
+      if(this->it_m % dump_freq_m == 0) {
+      	this->dump();
+      }
       m << this->it_m << " Done" << endl;
     }
 
@@ -125,6 +127,7 @@ public:
       this->fcontainer_m->getOmegaField() = 0.0;
       if constexpr (Dim == 2) {
           scatter(this->pcontainer_m->omega, this->fcontainer_m->getOmegaField(), this->pcontainer_m->R);
+	  this->fcontainer_m->getOmegaField() = this->fcontainer_m->getOmegaField() / (hr_m[0] * hr_m[1]);
       } else if constexpr (Dim == 3) {
         //TODO: for some reason the scatter method doesn't work in three dimensions but gather does. 
       }

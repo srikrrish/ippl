@@ -27,11 +27,11 @@ public:
     using FieldSolver_t       = FieldSolver<T, Dim>; 
     using LoadBalancer_t      = LoadBalancer<T, Dim>;
 
-    VortexInCellManager(unsigned nt_, Vector_t<int, Dim>& nr_, unsigned np_, std::string& solver_, double lbt_,
+    VortexInCellManager(unsigned nt_, Vector_t<int, Dim>& nr_, unsigned np_, std::string& solver_, int dump_freq_, 
         Vector_t<double, Dim> rmin_ = 0.0,
         Vector_t<double, Dim> rmax_ = 10.0,
         Vector_t<double, Dim> origin_ = 0.0)
-        : AlvineManager<T, Dim>(nt_, nr_, np_, solver_, lbt_) {
+        : AlvineManager<T, Dim>(nt_, nr_, np_, solver_, dump_freq_) {
             this->rmin_m = rmin_;
             this->rmax_m = rmax_;
             this->origin_m = origin_;
@@ -61,7 +61,7 @@ public:
       this->hr_m = dr / this->nr_m;
 
       // Courant condition
-      this->dt_m = std::min(0.05, 0.5 * ( *std::min_element(this->hr_m.begin(), this->hr_m.end()) ) );
+      this->dt_m = 0.05;//std::min(0.05, 0.5 * ( *std::min_element(this->hr_m.begin(), this->hr_m.end()) ) );
 
       this->it_m = 0;
       this->time_m = 0.0;
@@ -84,7 +84,7 @@ public:
       
       this->fsolver_m->initSolver();
 
-      this->setLoadBalancer( std::make_shared<LoadBalancer_t>( this->lbt_m, this->fcontainer_m, this->pcontainer_m, this->fsolver_m) );
+      //this->setLoadBalancer( std::make_shared<LoadBalancer_t>( this->lbt_m, this->fcontainer_m, this->pcontainer_m, this->fsolver_m) );
 
       initializeParticles();
 
@@ -121,8 +121,14 @@ public:
       double rmin[Dim];
       double rmax[Dim];
       for(unsigned int i=0; i<Dim; i++){
-          rmin[i] = this->rmin_m[i];
-          rmax[i] = this->rmax_m[i];
+	  if(i==0) {
+          	rmin[i] = this->rmin_m[i];
+          	rmax[i] = this->rmax_m[i];
+	  }
+	  else {
+		rmin[i] = (this->rmin_m[i] + this->rmax_m[i]) / 2.0 - 1.0;
+		rmax[i] = (this->rmin_m[i] + this->rmax_m[i]) / 2.0 + 1.0;
+	  }
       }
 
       // Sample from uniform distribution
@@ -130,7 +136,7 @@ public:
 
       // Assign vorticity based on radius from center
       Kokkos::parallel_for(totalP,
-        VortexDistribution(*R, omega_host, this->rmin_m, this->rmax_m, this->origin_m));
+        VortexDistribution(*R, omega_host, this->rmin_m, this->rmax_m, this->origin_m, this->np_m));
     
       Kokkos::deep_copy(pc->omega.getView(), omega_host);
 

@@ -15,14 +15,16 @@ public:
     view_type r;
     host_type omega;
     vector_type rmin, rmax, origin, center;
+    unsigned np;
 
     BaseDistribution(view_type r_, host_type omega_, vector_type r_min, vector_type r_max,
-                     vector_type origin)
+                     vector_type origin, unsigned np)
         : r(r_)
         , omega(omega_)
         , rmin(r_min)
         , rmax(r_max)
-        , origin(origin) {
+        , origin(origin) 
+	, np(np) {
         this->center = rmin + 0.5 * (rmax - rmin);
     }
 
@@ -32,8 +34,8 @@ public:
 class UnitDisk : BaseDistribution {
 public:
     UnitDisk(view_type r_, host_type omega_, vector_type r_min, vector_type r_max,
-             vector_type origin)
-        : BaseDistribution(r_, omega_, r_min, r_max, origin) {}
+             vector_type origin, unsigned np)
+        : BaseDistribution(r_, omega_, r_min, r_max, origin, np) {}
 
     KOKKOS_INLINE_FUNCTION void operator()(const size_t i) const {
         vector_type dist = this->r(i) - this->center;
@@ -46,7 +48,8 @@ public:
         if (norm > radius) {
             this->omega(i) = 0;  // 15/radius_core seemed to be too strong
         } else {
-            this->omega(i) = 1;
+            //this->omega(i) = 1;
+            this->omega(i) = 1 * ((rmax[1] - rmin[1]) * (rmax[0] - rmin[0])) / np;
         }
     }
 };
@@ -54,30 +57,32 @@ public:
 class HalfPlane : BaseDistribution {
 public:
     HalfPlane(view_type r_, host_type omega_, vector_type r_min, vector_type r_max,
-              vector_type origin)
-        : BaseDistribution(r_, omega_, r_min, r_max, origin) {}
+              vector_type origin, unsigned np)
+        : BaseDistribution(r_, omega_, r_min, r_max, origin, np) {}
 
     KOKKOS_INLINE_FUNCTION void operator()(const size_t i) const {
         if (this->r(i)(1) > this->center(1)) {
-            this->omega(i) = 1;
+            //this->omega(i) = 1;
+            this->omega(i) = 1 * ((rmax[1] - rmin[1]) * (rmax[0] - rmin[0])) / np;
         } else {
-            this->omega(i) = -1;
+            //this->omega(i) = -1;
+            this->omega(i) = -1 * ((rmax[1] - rmin[1]) * (rmax[0] - rmin[0])) / np;
         }
     }
 };
 
 class Band : BaseDistribution {
 public:
-    Band(view_type r_, host_type omega_, vector_type r_min, vector_type r_max, vector_type origin)
-        : BaseDistribution(r_, omega_, r_min, r_max, origin) {}
+    Band(view_type r_, host_type omega_, vector_type r_min, vector_type r_max, vector_type origin, unsigned np)
+        : BaseDistribution(r_, omega_, r_min, r_max, origin, np) {}
 
     KOKKOS_INLINE_FUNCTION void operator()(const size_t i) const {
-        if (this->r(i)(1) > this->center(1) + 1 or this->r(i)(1) < this->center(1) - 1) {
-            // Outside of the band
-            this->omega(i) = 0;
-        } else {
-            this->omega(i) = 1;
-        }
+        //if (this->r(i)(1) > this->center(1) + 1 or this->r(i)(1) < this->center(1) - 1) {
+        //    // Outside of the band
+        //    this->omega(i) = 0;
+        //} else {
+            this->omega(i) = (2.0 * (rmax[0] - rmin[0])) / np;
+        //}
     }
 };
 

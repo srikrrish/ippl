@@ -1,18 +1,19 @@
 // Vortex In Cell Test
 //   Usage:
 //     srun ./VortexInCell
-//                  <nx> [<ny>...] <Nt> <stype> --overallocate <ovfactor> --info 10
+//                  <nx> [<ny>...] <Np> <Nt> <stype> <dump_freq> --overallocate <ovfactor> --info 10
 //     nx       = No. cell-centered points in the x-direction
 //     ny...    = No. cell-centered points in the y-, z-, ...-direction
+//     Np       = No. of vortex particles in the simulation
 //     Nt       = Number of time steps
 //     stype    = Field solver type (FFT and CG supported)
+//     dump_freq= Dumping frequency of particle output
 //     ovfactor = Over-allocation factor for the buffers used in the communication. Typical
 //                values are 1.0, 2.0. Value 1.0 means no over-allocation.
 //     Example:
 //     makdir build_*/alvine/data
 //     chmod +x data
-//     srun ./VortexInCell 128 128 100 FFT --overallocate 2.0 --info 10
-//     srun ./VortexInCell 128 128
+//     srun ./VortexInCell 128 128 10000 100 FFT 100 --overallocate 1.0 --info 5
 //     to build, call 
 //          make VortexInCell 
 //     in the build directory to only build this target
@@ -61,11 +62,11 @@ int main(int argc, char* argv[]) {
 
         std::string solver = argv[arg++];
 
-        double lbt = std::atof(argv[arg++]);
-
-        msg << " Grid size: " << nr << " No. of particles: " << np << " No. of time steps: " << nt << endl;
+        int dump_freq  = std::atoi(argv[arg++]);
         
-        VortexInCellManager<T, Dim, Band> manager(nt, nr, np, solver, lbt);
+	msg << " Grid size: " << nr << " No. of particles: " << np << " No. of time steps: " << nt << endl;
+        
+        VortexInCellManager<T, Dim, Band> manager(nt, nr, np, solver, dump_freq);
 
         manager.pre_run();
 
