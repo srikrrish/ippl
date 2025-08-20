@@ -81,12 +81,12 @@ namespace ippl {
             Error->setOutputLevel(0);
             Warn->setOutputLevel(0);
 
-            if (infoLevel > 0 && Comm->rank() == 0) {
-                for (auto& l : notparsed) {
-                    std::cout << "Warning: Option '" << l << "' is not parsed by Ippl."
-                              << std::endl;
-                }
-            }
+            //if (infoLevel > 0 && Comm->rank() == 0) {
+            //    for (auto& l : notparsed) {
+            //        std::cout << "Warning: Option '" << l << "' is not parsed by Ippl."
+            //                  << std::endl;
+            //    }
+            //}
         } catch (const std::exception& e) {
             if (Comm->rank() == 0) {
                 std::cerr << e.what() << std::endl;

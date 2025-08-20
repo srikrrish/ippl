@@ -72,6 +72,14 @@ public:
         omega_field_m.initialize(mesh_m, fl_m);
         u_field_m.initialize(mesh_m, fl_m);
     }
+    void setOmegaBCs() {
+        typedef ippl::BConds<Field<T, Dim>, Dim> bc_type;
+        bc_type allPeriodic;
+        for (unsigned int i = 0; i < 2 * Dim; ++i) {
+            allPeriodic[i] = std::make_shared<ippl::PeriodicFace<Field<T, Dim>>>(i);
+        }
+        omega_field_m.setFieldBC(allPeriodic);
+    }
 };
 
 #endif

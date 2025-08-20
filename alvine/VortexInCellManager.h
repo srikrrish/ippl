@@ -27,11 +27,11 @@ public:
     using FieldSolver_t       = FieldSolver<T, Dim>; 
     using LoadBalancer_t      = LoadBalancer<T, Dim>;
 
-    VortexInCellManager(unsigned nt_, Vector_t<int, Dim>& nr_, std::string& solver_, double lbt_,
+    VortexInCellManager(unsigned nt_, Vector_t<int, Dim>& nr_, unsigned np_, std::string& solver_, double lbt_,
         Vector_t<double, Dim> rmin_ = 0.0,
         Vector_t<double, Dim> rmax_ = 10.0,
         Vector_t<double, Dim> origin_ = 0.0)
-        : AlvineManager<T, Dim>(nt_, nr_, solver_, lbt_) {
+        : AlvineManager<T, Dim>(nt_, nr_, np_, solver_, lbt_) {
             this->rmin_m = rmin_;
             this->rmax_m = rmax_;
             this->origin_m = origin_;
@@ -66,7 +66,7 @@ public:
       this->it_m = 0;
       this->time_m = 0.0;
 
-      this->np_m = 10000; //this->nr_m[0] * this->nr_m[0];
+      //this->np_m = 10000; //this->nr_m[0] * this->nr_m[0];
 
       this->decomp_m.fill(true);
       this->isAllPeriodic_m = true;
@@ -79,6 +79,8 @@ public:
             this->fcontainer_m->getMesh(), this->fcontainer_m->getFL()));
         
       this->fcontainer_m->initializeFields();
+      
+      this->fcontainer_m->setOmegaBCs();
 
       this->setFieldSolver( std::make_shared<FieldSolver_t>( this->solver_m, &this->fcontainer_m->getOmegaField()) );
       
@@ -150,11 +152,15 @@ public:
       static IpplTimings::TimerRef RTimer           = IpplTimings::getTimer("pushPosition");
       static IpplTimings::TimerRef updateTimer      = IpplTimings::getTimer("update");
       static IpplTimings::TimerRef SolveTimer       = IpplTimings::getTimer("solve");
+      static IpplTimings::TimerRef par2gridTimer = IpplTimings::getTimer("par2grid");
+      static IpplTimings::TimerRef grid2parTimer = IpplTimings::getTimer("grid2par");
       
       std::shared_ptr<ParticleContainer_t> pc = this->pcontainer_m;
 
       // scatter the vorticity to the underlying grid
+      IpplTimings::startTimer(par2gridTimer);	
       this->par2grid();
+      IpplTimings::stopTimer(par2gridTimer);	
 
       // claculate stream function
       IpplTimings::startTimer(SolveTimer);
@@ -167,7 +173,9 @@ public:
       IpplTimings::stopTimer(PTimer);
 
       // gather velocity field
+      IpplTimings::startTimer(grid2parTimer);	
       this->grid2par();
+      IpplTimings::stopTimer(grid2parTimer);	
 
       //drift
       IpplTimings::startTimer(RTimer);
@@ -185,6 +193,8 @@ public:
     }
 
     void dump() override {
+      static IpplTimings::TimerRef dumpTimer = IpplTimings::getTimer("dump");
+      IpplTimings::startTimer(dumpTimer);
       std::shared_ptr<ParticleContainer_t> pc = this->pcontainer_m;
 
       Inform csvout(NULL, "particles.csv", Inform::APPEND);
@@ -196,6 +206,7 @@ public:
         }
         csvout << "," << pc->omega(i) << endl;
       }
+      IpplTimings::stopTimer(dumpTimer);
        
     }
 

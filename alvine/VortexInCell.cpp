@@ -47,11 +47,15 @@ int main(int argc, char* argv[]) {
     {
         Inform msg(TestName);
 
+	static IpplTimings::TimerRef mainTimer = IpplTimings::getTimer("total");
+	IpplTimings::startTimer(mainTimer);
         unsigned arg = 1;    
         Vector_t<int, Dim> nr;
         for (unsigned d = 0; d < Dim; d++) {
             nr[d] = std::atoi(argv[arg++]);
         }
+
+	int np = std::atoi(argv[arg++]);
 
         int nt  = std::atoi(argv[arg++]);
 
@@ -59,13 +63,16 @@ int main(int argc, char* argv[]) {
 
         double lbt = std::atof(argv[arg++]);
 
-        msg << nt << endl;
+        msg << " Grid size: " << nr << " No. of particles: " << np << " No. of time steps: " << nt << endl;
         
-        VortexInCellManager<T, Dim, Band> manager(nt, nr, solver, lbt);
+        VortexInCellManager<T, Dim, Band> manager(nt, nr, np, solver, lbt);
 
         manager.pre_run();
 
         manager.run(manager.getNt());
+	IpplTimings::stopTimer(mainTimer);
+	IpplTimings::print();
+        IpplTimings::print(std::string("timing.dat"));
     }
     ippl::finalize();
 

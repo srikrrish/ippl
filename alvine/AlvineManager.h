@@ -30,8 +30,8 @@ public:
 protected:
     unsigned nt_m;
     unsigned it_m;
-    unsigned np_m;
     Vector_t<int, Dim> nr_m;
+    unsigned np_m;
     std::array<bool, Dim> decomp_m;
     bool isAllPeriodic_m;
     ippl::NDIndex<Dim> domain_m;
@@ -39,10 +39,11 @@ protected:
     double lbt_m;
 
 public:
-    AlvineManager(unsigned nt_, Vector_t<int, Dim>& nr_, std::string& solver_, double lbt_)
+    AlvineManager(unsigned nt_, Vector_t<int, Dim>& nr_, unsigned np_, std::string& solver_, double lbt_)
         : ippl::PicManager<T, Dim, ParticleContainer<T, Dim>, FieldContainer<T, Dim>, LoadBalancer<T, Dim>>() 
         , nt_m(nt_)
         , nr_m(nr_)
+        , np_m(np_)
         , solver_m(solver_)
         , lbt_m(lbt_) {}
 
@@ -69,25 +70,29 @@ public:
     virtual void dump() { /* default does nothing */ };
 
     void pre_step() override {
-        Inform m("Pre-step");
-        m << "Done" << endl;
     }
 
     void post_step() override {
+      Inform m("Step: ");
       this->time_m += this->dt_m;
       this->it_m++;
 
       this->dump();
+      m << this->it_m << " Done" << endl;
     }
 
-    void grid2par() override { gatherCIC(); }
+    void grid2par() override { 
+	gatherCIC(); 
+    }
 
     void gatherCIC() {
       this->pcontainer_m->P = 0.0;
       gather(this->pcontainer_m->P, this->fcontainer_m->getUField(), this->pcontainer_m->R);
     }
 
-    void par2grid() override { scatterCIC(); }
+    void par2grid() override {
+	scatterCIC(); 
+    }
 
     void computeVelocityField() {
 
