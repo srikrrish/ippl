@@ -1,19 +1,11 @@
 // Vortex In Cell Test
 //   Usage:
 //     srun ./VortexInCell
-//                  <nx> [<ny>...] <Np> <Nt> <stype> <lbthres>
-//                  <t_method> --overallocate <ovfactor> --info 10
+//                  <nx> [<ny>...] <Nt> <stype> --overallocate <ovfactor> --info 10
 //     nx       = No. cell-centered points in the x-direction
 //     ny...    = No. cell-centered points in the y-, z-, ...-direction
-//     Np       = Total no. of macro-particles in the simulation
 //     Nt       = Number of time steps
-//     visc     = Viscosity
 //     stype    = Field solver type (FFT and CG supported)
-//     lbthres  = Load balancing threshold i.e., lbthres*100 is the maximum load imbalance
-//                percentage which can be tolerated and beyond which
-//                particle load balancing occurs. A value of 0.01 is good for many typical
-//                simulations.
-//     t_method = Time-stepping method used e.g. Leapfrog
 //     ovfactor = Over-allocation factor for the buffers used in the communication. Typical
 //                values are 1.0, 2.0. Value 1.0 means no over-allocation.
 //     Example:
@@ -69,7 +61,7 @@ int main(int argc, char* argv[]) {
 
         msg << nt << endl;
         
-        VortexInCellManager<T, Dim, UnitDisk> manager(nt, nr, solver, lbt);
+        VortexInCellManager<T, Dim, Band> manager(nt, nr, solver, lbt);
 
         manager.pre_run();
 
