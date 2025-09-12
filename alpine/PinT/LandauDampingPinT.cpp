@@ -634,16 +634,16 @@ int main(int argc, char *argv[]){
                 << " Perror: " << Perror
                 << endl;
 
-            IpplTimings::startTimer(dumpData);
-            Pcoarse->writelocalError(Rerror, Perror, nc+1, it+1, rankTime, rankSpace);
-            IpplTimings::stopTimer(dumpData);
+            //IpplTimings::startTimer(dumpData);
+            //Pcoarse->writelocalError(Rerror, Perror, nc+1, it+1, rankTime, rankSpace);
+            //IpplTimings::stopTimer(dumpData);
 
-            MPI_Barrier(spaceComm);
+            //MPI_Barrier(spaceComm);
             
             it += 1;
         }
         
-        MPI_Barrier(MPI_COMM_WORLD);
+        //MPI_Barrier(MPI_COMM_WORLD);
         if((nCycles > 1) && (nc < (nCycles - 1))) {  
             tag = 1000;//Ippl::Comm->next_tag(IPPL_PARAREAL_APP, IPPL_APP_CYCLE);
            

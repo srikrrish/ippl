@@ -921,10 +921,18 @@ namespace ippl {
                                            const size_t j,
                                            const size_t k)
                              {
+#ifdef FINUFFT_USE_CUDA
                                  tempField(i-nghost, j-nghost, k-nghost).x =
                                        fview(i, j, k).real();
                                  tempField(i-nghost, j-nghost, k-nghost).y = 
                                        fview(i, j, k).imag();
+#else
+                                 tempField(i-nghost, j-nghost, k-nghost).real() =
+                                       fview(i, j, k).real();
+                                 tempField(i-nghost, j-nghost, k-nghost).imag() = 
+                                       fview(i, j, k).imag();
+#endif
+
                              });
 
 
@@ -937,8 +945,14 @@ namespace ippl {
                                     tempR[d](i) = Rview(i)[d] * (2.0 * pi / Len[d]);
                                     //tempR[d](i) = Rview(i)[d];
                                  }
+#ifdef FINUFFT_USE_CUDA
                                  tempQ(i).x = Qview(i);
                                  tempQ(i).y = 0.0;
+#else
+                                 tempQ(i).real() = Qview(i);
+                                 tempQ(i).imag() = 0.0;
+#endif
+
                              });
 
         ier_m = nufft_m.setpts(plan_m, localNp, tempR[0].data(), tempR[1].data(), tempR[2].data(), 0, 
@@ -959,10 +973,18 @@ namespace ippl {
                                                const size_t j,
                                                const size_t k)
                                  {
+#ifdef FINUFFT_USE_CUDA
                                      fview(i, j, k).real() =
                                      tempField(i-nghost, j-nghost, k-nghost).x;
                                      fview(i, j, k).imag() =
                                      tempField(i-nghost, j-nghost, k-nghost).y;
+#else
+                                     fview(i, j, k).real() =
+                                     tempField(i-nghost, j-nghost, k-nghost).real();
+                                     fview(i, j, k).imag() =
+                                     tempField(i-nghost, j-nghost, k-nghost).imag();
+#endif
+
                                  });
         }
         else if(type_m == 2) {
@@ -970,7 +992,11 @@ namespace ippl {
                                  localNp,
                                  KOKKOS_LAMBDA(const size_t i)
                                  {
+#ifdef FINUFFT_USE_CUDA
                                      Qview(i) = tempQ(i).x;
+#else
+                                     Qview(i) = tempQ(i).real();
+#endif
                                  });
         }
     }

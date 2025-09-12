@@ -30,7 +30,11 @@
 
 #include <heffte_fft3d.h>
 #include <heffte_fft3d_r2c.h>
-#include <cufinufft.h>
+#ifdef FINUFFT_USE_CUDA
+	#include <cufinufft.h>
+#elif FINUFFT_USE_CPU
+	#include <finufft.h>
+#endif
 #include <array>
 #include <memory>
 #include <functional>
@@ -69,12 +73,12 @@ namespace ippl {
        Tag classes for Cosine transforms
     */
     class CosTransform {};
-#ifdef KOKKOS_ENABLE_CUDA
+//#ifdef KOKKOS_ENABLE_CUDA
     /**
        Tag classes for Non-uniform type of Fourier transforms
     */
     class NUFFTransform {};
-#endif
+//#endif
 
     enum FFTComm {
         a2av = 0,
@@ -123,12 +127,13 @@ namespace ippl {
 #endif
 #endif
 
-#ifdef KOKKOS_ENABLE_CUDA
         template <class T>
-        struct CufinufftType {};
+        struct finufftType;
+#ifdef FINUFFT_USE_CUDA
+#ifdef KOKKOS_ENABLE_CUDA
 
         template <>
-        struct CufinufftType<float> {
+        struct finufftType<float> {
             std::function<int(int, int, int64_t*, int, int, 
                               float, cufinufftf_plan*, cufinufft_opts*)> makeplan = cufinufftf_makeplan; 
             std::function<int(cufinufftf_plan, int, float*, float*, float*, 
@@ -141,7 +146,7 @@ namespace ippl {
         };
 
         template <>
-        struct CufinufftType<double> {
+        struct finufftType<double> {
             std::function<int(int, int, int64_t*, int, int, 
                               double, cufinufft_plan*, cufinufft_opts*)> makeplan = cufinufft_makeplan; 
             std::function<int(cufinufft_plan, int, double*, double*, double*, 
@@ -153,6 +158,36 @@ namespace ippl {
             using plan_t      = cufinufft_plan;
         };
 #endif
+#endif
+
+#ifdef FINUFFT_USE_CPU
+        template <>
+        struct finufftType<float> {
+            std::function<int(int, int, int64_t*, int, int, 
+                              float, finufftf_plan*, finufft_opts*)> makeplan = finufftf_makeplan; 
+            std::function<int(finufftf_plan, int64_t, float*, float*, float*, 
+                              int64_t, float*, float*, float*)> setpts = finufftf_setpts; 
+            std::function<int(finufftf_plan, std::complex<float>*, std::complex<float>*)> execute = finufftf_execute; 
+            std::function<int(finufftf_plan)> destroy = finufftf_destroy;
+            
+            using complexType = std::complex<float>;
+            using plan_t      = finufftf_plan;
+        };
+
+        template <>
+        struct finufftType<double> {
+            std::function<int(int, int, int64_t*, int, int, 
+                              double, cufinufft_plan*, cufinufft_opts*)> makeplan = finufft_makeplan; 
+            std::function<int(finufft_plan, int64_t, double*, double*, double*, 
+                              int64_t, double*, double*, double*)> setpts = finufft_setpts; 
+            std::function<int(finufft_plan, std::complex<double>*, std::complex<double>*)> execute = finufft_execute; 
+            std::function<int(finufft_plan)> destroy = finufft_destroy; 
+            
+            using complexType = std::complex<double>;
+            using plan_t      = finufft_plan;
+        };
+#endif
+
     }
 
     /**
@@ -361,11 +396,18 @@ namespace ippl {
         typedef Kokkos::complex<T> KokkosComplex_t;
         typedef Field<KokkosComplex_t,Dim> ComplexField_t;
 
-        using complexType = typename detail::CufinufftType<T>::complexType;
-        using plan_t = typename detail::CufinufftType<T>::plan_t;
+        using complexType = typename detail::finufftType<T>::complexType;
+        using plan_t = typename detail::finufftType<T>::plan_t;
+#ifdef KOKKOS_ENABLE_CUDA
         using view_field_type = typename detail::ViewType<complexType, 3, Kokkos::LayoutLeft>::view_type;
         using view_particle_real_type = typename detail::ViewType<T, 1, Kokkos::LayoutLeft>::view_type;
         using view_particle_complex_type = typename detail::ViewType<complexType, 1, Kokkos::LayoutLeft>::view_type;
+#else
+        using view_field_type = typename detail::ViewType<complexType, 3, Kokkos::LayoutRight>::view_type;
+        using view_particle_real_type = typename detail::ViewType<T, 1, Kokkos::LayoutRight>::view_type;
+        using view_particle_complex_type = typename detail::ViewType<complexType, 1, Kokkos::LayoutRight>::view_type;
+#endif
+
 
 
         FFT() = default;
@@ -393,7 +435,7 @@ namespace ippl {
         void setup(std::array<int64_t, 3>& nmodes,
                    const ParameterList& params);
 
-        detail::CufinufftType<T> nufft_m;
+        detail::finufftType<T> nufft_m;
         plan_t plan_m;
         int ier_m;
         T tol_m;
