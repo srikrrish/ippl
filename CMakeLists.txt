@@ -75,11 +75,20 @@ if (ENABLE_FFT)
     message (STATUS "Found Heffte_DIR: ${Heffte_DIR}")
 endif ()
 
-option (ENABLE_NUFFT "Enable NUFFT transform" OFF)
-if (ENABLE_NUFFT)
-    add_definitions (-DENABLE_NUFFT)
+option (ENABLE_CPU_NUFFT "Enable CPU NUFFT transform" OFF)
+option (ENABLE_GPU_NUFFT "Enable GPU NUFFT transform" OFF)
+if (ENABLE_GPU_NUFFT)
+    add_definitions (-DENABLE_GPU_NUFFT)
     find_package(CUFINUFFT REQUIRED)
     message (STATUS "Found CUFINUFFT_DIR: ${CUFINUFFT_DIR}")
+endif ()
+
+if (ENABLE_CPU_NUFFT)
+    add_definitions (-DENABLE_CPU_NUFFT)
+    #find_package(finufft REQUIRED)
+    find_package(FINUFFT REQUIRED)
+    message (STATUS "Found FINUFFT_DIR: ${FINUFFT_DIR}")
+
 endif ()
 
 option (ENABLE_CATALYST "Build example with Catalyst enabled" OFF)

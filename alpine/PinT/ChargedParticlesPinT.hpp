@@ -178,10 +178,13 @@ public:
         
         ippl::ParameterList fftCoarseParams,fftFineParams;
 
+        fftFineParams.add("tolerance", fineTol);
+        fftCoarseParams.add("tolerance", coarseTol);
+        
+#ifdef FINUFFT_USE_CUDA
         fftFineParams.add("gpu_method", 2);
         fftFineParams.add("gpu_sort", 0);
         fftFineParams.add("gpu_kerevalmeth", 1);
-        fftFineParams.add("tolerance", fineTol);
         fftFineParams.add("gpu_binsizex", 8);
         fftFineParams.add("gpu_binsizey", 8);
         fftFineParams.add("gpu_binsizez", 2);
@@ -190,14 +193,23 @@ public:
         fftCoarseParams.add("gpu_method", 2);
         fftCoarseParams.add("gpu_sort", 0);
         fftCoarseParams.add("gpu_kerevalmeth", 1);
-        fftCoarseParams.add("tolerance", coarseTol);
         fftCoarseParams.add("gpu_binsizex", 8);
         fftCoarseParams.add("gpu_binsizey", 8);
         fftCoarseParams.add("gpu_binsizez", 2);
         fftCoarseParams.add("gpu_maxsubprobsize", 1024);
+#else
+        fftFineParams.add("spread_kerevalmeth", 1);
+        fftFineParams.add("spread_sort", 2);
+        fftFineParams.add("nthreads", 0);
 
-        fftFineParams.add("use_cufinufft_defaults", false);
-        fftCoarseParams.add("use_cufinufft_defaults", false);
+        fftCoarseParams.add("spread_kerevalmeth", 1);
+        fftCoarseParams.add("spread_sort", 2);
+        fftCoarseParams.add("nthreads", 0);
+#endif
+        
+
+        fftFineParams.add("use_finufft_defaults", false);
+        fftCoarseParams.add("use_finufft_defaults", false);
         
         nufftType1Fine_mp = std::make_shared<ippl::FFT<ippl::NUFFTransform, 3, double>>(FLPIF, this->getLocalNum(), 1, fftFineParams);
         nufftType2Fine_mp = std::make_shared<ippl::FFT<ippl::NUFFTransform, 3, double>>(FLPIF, this->getLocalNum(), 2, fftFineParams);
@@ -711,7 +723,7 @@ public:
                      const unsigned int& /*iter*/, int /*rankTime*/, int /*rankSpace*/,
                      const std::string& propagator, MPI_Comm& spaceComm) {
     
-        static IpplTimings::TimerRef dumpData = IpplTimings::getTimer("dumpData");
+        //static IpplTimings::TimerRef dumpData = IpplTimings::getTimer("dumpData");
         PLayout& PL = this->getLayout();
         rhoPIF_m = {0.0, 0.0};
         if(propagator == "Coarse") {

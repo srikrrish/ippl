@@ -228,7 +228,7 @@ int main(int argc, char *argv[]){
     MPI_Comm spaceComm, timeComm;
 
     int spaceProcs = std::atoi(argv[15]);
-    int timeProcs = std::atoi(argv[16]);
+    //int timeProcs = std::atoi(argv[16]);
     spaceColor = Ippl::Comm->rank() / spaceProcs; 
     timeColor = Ippl::Comm->rank() % spaceProcs;
 
@@ -263,7 +263,7 @@ int main(int argc, char *argv[]){
     static IpplTimings::TimerRef deepCopy = IpplTimings::getTimer("deepCopy");
     static IpplTimings::TimerRef finePropagator = IpplTimings::getTimer("finePropagator");
     static IpplTimings::TimerRef coarsePropagator = IpplTimings::getTimer("coarsePropagator");
-    static IpplTimings::TimerRef dumpData = IpplTimings::getTimer("dumpData");
+    //static IpplTimings::TimerRef dumpData = IpplTimings::getTimer("dumpData");
     static IpplTimings::TimerRef computeErrors = IpplTimings::getTimer("computeErrors");
     static IpplTimings::TimerRef initializeShapeFunctionPIF = IpplTimings::getTimer("initializeShapeFunctionPIF");
 
@@ -428,7 +428,7 @@ int main(int argc, char *argv[]){
 
     IpplTimings::startTimer(particleCreation);
 
-#ifdef KOKKOS_ENABLE_CUDA
+//#ifdef KOKKOS_ENABLE_CUDA
     //If we don't do the following even with the same seed the initial 
     //condition is not the same on different GPUs
 
@@ -488,16 +488,16 @@ int main(int argc, char *argv[]){
         MPI_Wait(&request, MPI_STATUS_IGNORE);
     }
     IpplTimings::stopTimer(timeCommunication);
-#else
-    //Note the CPU version has not been tested.
-    Kokkos::Random_XorShift64_Pool<> rand_pool64((size_type)(0));
-    Kokkos::parallel_for(nloc,
-                         generate_random<Vector_t, Kokkos::Random_XorShift64_Pool<>, Dim>(
-                         Pcoarse->R.getView(), Pcoarse->P.getView(), rand_pool64, alpha, kw, minU, maxU));
-
-    Kokkos::fence();
-    Ippl::Comm->barrier();
-#endif
+//#else
+//    //Note the CPU version has not been tested.
+//    Kokkos::Random_XorShift64_Pool<> rand_pool64((size_type)(0));
+//    Kokkos::parallel_for(nloc,
+//                         generate_random<Vector_t, Kokkos::Random_XorShift64_Pool<>, Dim>(
+//                         Pcoarse->R.getView(), Pcoarse->P.getView(), rand_pool64, alpha, kw, minU, maxU));
+//
+//    Kokkos::fence();
+//    Ippl::Comm->barrier();
+//#endif
 
     msg << "Parareal "
         << TestName

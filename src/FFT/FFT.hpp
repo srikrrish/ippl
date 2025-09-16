@@ -772,14 +772,14 @@ namespace ippl {
     }
 
 
-#ifdef KOKKOS_ENABLE_CUDA
+//#ifdef KOKKOS_ENABLE_CUDA
     //=========================================================================
     // FFT NUFFTransform Constructors
     //=========================================================================
 
     /**
        Create a new FFT object of type NUFFTransform, with a
-       given layout and cuFINUFFT parameters.
+       given layout and FINUFFT parameters.
     */
 
     template <size_t Dim, class T>
@@ -789,7 +789,7 @@ namespace ippl {
                                   const ParameterList& params)
     {
         /**
-         * cuFINUFFT requires to pass a 3D array even for 2D and
+         * FINUFFT requires to pass a 3D array even for 2D and
          * 1D FFTs we just have to fill in other
          * dimensions to be 1. Note this is different from Heffte
          * where we fill 0.
@@ -830,12 +830,18 @@ namespace ippl {
                                     const ParameterList& params)
     {
 
+#ifdef FINUFFT_USE_CUDA
         cufinufft_opts opts;
 	    cufinufft_default_opts(&opts);
+#else
+        finufft_opts opts;
+	    finufft_default_opts(&opts);
+#endif
         tol_m = 1e-6;
 
-        if(!params.get<bool>("use_cufinufft_defaults")) {
+        if(!params.get<bool>("use_finufft_defaults")) {
            tol_m = params.get<T>("tolerance");
+#ifdef FINUFFT_USE_CUDA
            opts.gpu_method = params.get<int>("gpu_method");
            opts.gpu_sort = params.get<int>("gpu_sort");
            opts.gpu_kerevalmeth = params.get<int>("gpu_kerevalmeth");
@@ -843,13 +849,20 @@ namespace ippl {
            opts.gpu_binsizey = params.get<int>("gpu_binsizey");
            opts.gpu_binsizez = params.get<int>("gpu_binsizez");
            opts.gpu_maxsubprobsize = params.get<int>("gpu_maxsubprobsize");
+#else
+           opts.spread_sort = params.get<int>("spread_sort");
+           opts.spread_kerevalmeth = params.get<int>("spread_kerevalmeth");
+           opts.nthreads = params.get<int>("nthreads");
+#endif
         }
 
+#ifdef FINUFFT_USE_CUDA
 	    opts.gpu_maxbatchsize = 0; //default option. ignored for ntransf = 1 which
                                    // is our case
 	    //For Perlmutter since the mask to hide the other GPUs in the node is 
         //somehow not working there
         //opts.gpu_device_id = (int)(Ippl::Comm->rank() % 4);
+#endif
 
         int iflag;
         
@@ -863,7 +876,7 @@ namespace ippl {
             throw std::logic_error("Only type 1 and type 2 NUFFT are allowed now");
         }
 
-        //dim in cufinufft is int
+        //dim in finufft is int
         int dim = static_cast<int>(Dim);
         ier_m = nufft_m.makeplan(type_m, dim, nmodes.data(), iflag, 1, tol_m,
                        		 &plan_m, &opts);  
@@ -906,6 +919,7 @@ namespace ippl {
         auto tempField = tempField_m;
         auto tempQ = tempQ_m;
         Kokkos::View<T*,Kokkos::LayoutLeft> tempR[3] = {};
+        
         for(size_t d = 0; d < Dim; ++d) {
             tempR[d] = tempR_m[d];
         }
@@ -927,10 +941,8 @@ namespace ippl {
                                  tempField(i-nghost, j-nghost, k-nghost).y = 
                                        fview(i, j, k).imag();
 #else
-                                 tempField(i-nghost, j-nghost, k-nghost).real() =
-                                       fview(i, j, k).real();
-                                 tempField(i-nghost, j-nghost, k-nghost).imag() = 
-                                       fview(i, j, k).imag();
+                                 tempField(i-nghost, j-nghost, k-nghost).real(fview(i, j, k).real());
+                                 tempField(i-nghost, j-nghost, k-nghost).imag(fview(i, j, k).imag());
 #endif
 
                              });
@@ -949,8 +961,8 @@ namespace ippl {
                                  tempQ(i).x = Qview(i);
                                  tempQ(i).y = 0.0;
 #else
-                                 tempQ(i).real() = Qview(i);
-                                 tempQ(i).imag() = 0.0;
+                                 tempQ(i).real(Qview(i));
+                                 tempQ(i).imag(0.0);
 #endif
 
                              });
@@ -1007,7 +1019,7 @@ namespace ippl {
         ier_m = nufft_m.destroy(plan_m);
 
     }
-#endif
+//#endif
 }
 
 // vi: set et ts=4 sw=4 sts=4:

@@ -108,9 +108,12 @@ target_compile_definitions(ippl PUBLIC
   $<$<BOOL:${ENABLE_NUFFT}>:-DENABLE_NUFFT>
 )
 
-if (ENABLE_NUFFT)
-    target_include_directories(ippl PUBLIC ${CUFINUFFT_INCLUDE_DIR})
-    target_link_libraries(ippl PUBLIC Kokkos::kokkos ${CUFINUFFT_LIBRARY_DIR} ${HEFFTE_LIBRARY} $<$<BOOL:${ENABLE_CATALYST}>:catalyst::catalyst>)
+if (ENABLE_GPU_NUFFT)
+        target_include_directories(ippl PUBLIC ${CUFINUFFT_INCLUDE_DIR})
+        target_link_libraries(ippl PUBLIC Kokkos::kokkos ${CUFINUFFT_LIBRARY_DIR} ${HEFFTE_LIBRARY} $<$<BOOL:${ENABLE_CATALYST}>:catalyst::catalyst>)
+elseif (ENABLE_CPU_NUFFT)
+        target_include_directories(ippl PUBLIC ${FINUFFT_INCLUDE_DIR})
+        target_link_libraries(ippl PUBLIC Kokkos::kokkos ${FINUFFT_LIBRARY_DIR} ${HEFFTE_LIBRARY} $<$<BOOL:${ENABLE_CATALYST}>:catalyst::catalyst>)
 else()
     target_link_libraries(ippl PUBLIC Kokkos::kokkos ${HEFFTE_LIBRARY})
 endif()

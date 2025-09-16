@@ -230,7 +230,7 @@ int main(int argc, char *argv[]){
     MPI_Comm spaceComm, timeComm;
 
     int spaceProcs = std::atoi(argv[15]);
-    int timeProcs = std::atoi(argv[16]);
+    //int timeProcs = std::atoi(argv[16]);
     spaceColor = Ippl::Comm->rank() / spaceProcs; 
     timeColor = Ippl::Comm->rank() % spaceProcs;
 

@@ -172,28 +172,39 @@ public:
     void initNUFFT(FieldLayout_t& FL, double& tol) {
         ippl::ParameterList fftParams1, fftParams2;
 
+        fftParams1.add("tolerance", tol);
+        fftParams2.add("tolerance", tol);
+#ifdef FINUFFT_USE_CUDA
         fftParams1.add("gpu_method", 2);
         fftParams1.add("gpu_sort", 0);
         fftParams1.add("gpu_kerevalmeth", 1);
-        fftParams1.add("tolerance", tol);
         fftParams1.add("gpu_binsizex", 8);
         fftParams1.add("gpu_binsizey", 8);
         fftParams1.add("gpu_binsizez", 2);
         fftParams1.add("gpu_maxsubprobsize", 1024);
 
-        fftParams1.add("use_cufinufft_defaults", false);
 
         fftParams2.add("gpu_method", 2);
         fftParams2.add("gpu_sort", 0);
         fftParams2.add("gpu_kerevalmeth", 1);
-        fftParams2.add("tolerance", tol);
         fftParams2.add("gpu_binsizex", 8);
         fftParams2.add("gpu_binsizey", 8);
         fftParams2.add("gpu_binsizez", 2);
         fftParams2.add("gpu_maxsubprobsize", 1024);
 
-        fftParams2.add("use_cufinufft_defaults", false);
+#else
+        fftParams1.add("spread_kerevalmeth", 1);
+        fftParams1.add("spread_sort", 2);
+        fftParams1.add("nthreads", 0);
 
+
+        fftParams2.add("spread_kerevalmeth", 1);
+        fftParams2.add("spread_sort", 2);
+        fftParams2.add("nthreads", 0);
+#endif
+
+        fftParams1.add("use_finufft_defaults", false);
+        fftParams2.add("use_finufft_defaults", false);
 	//fftParams.add("use_cufinufft_defaults", true);
 
         nufftType1_mp = std::make_shared<ippl::FFT<ippl::NUFFTransform, 3, double>>(FL, this->getLocalNum(), 1, fftParams1);
@@ -486,93 +497,93 @@ public:
 
        kineticEnergy = globaltemp;
 
-       auto rhoPIFhalfview = rhoPIFhalf_m.getView();
-       const int nghostHalf = rhoPIFhalf_m.getNghost();
+       //auto rhoPIFhalfview = rhoPIFhalf_m.getView();
+       //const int nghostHalf = rhoPIFhalf_m.getNghost();
       
-       const FieldLayout_t& layoutHalf = rhoPIFhalf_m.getLayout(); 
-       const auto& domainHalf = layoutHalf.getDomain();
+       //const FieldLayout_t& layoutHalf = rhoPIFhalf_m.getLayout(); 
+       //const auto& domainHalf = layoutHalf.getDomain();
 
-       Vector<int, Dim> Nhalf;
-       for (unsigned d=0; d < Dim; ++d) {
-           Nhalf[d] = domainHalf[d].length();
-       }
+       //Vector<int, Dim> Nhalf;
+       //for (unsigned d=0; d < Dim; ++d) {
+       //    Nhalf[d] = domainHalf[d].length();
+       //}
 
-       //Heffte needs FFTshifted field whereas the field from cuFINUFFT
-       //is not shifted. Hence, here we do the shift. 
-       Kokkos::parallel_for("Transfer complex rho to half domain",
-                             mdrange_type({0, 0, 0},
-                                          {Nhalf[0],
-                                           Nhalf[1],
-                                           Nhalf[2]}),
-                             KOKKOS_LAMBDA(const int i,
-                                           const int j,
-                                           const int k)
-       {
-           Vector<int, 3> iVec = {i, j, k};
-           int shift;
-           for(size_t d = 0; d < Dim; ++d) {
-               bool isLessThanHalf = (iVec[d] < (Nhalf[d]/2));
-               shift = ((int)isLessThanHalf * 2) - 1;
-               iVec[d] = (iVec[d] + shift * (Nhalf[d]/2)) + nghostHalf;
-           }
-           //rhoPIFhalfview(Nhalf[0]-1-i+nghostHalf, iVec[1], iVec[2]).real() = rhoview(i+nghostHalf,j+nghostHalf,k+nghostHalf).real();
-           //rhoPIFhalfview(Nhalf[0]-1-i+nghostHalf, iVec[1], iVec[2]).imag() = -rhoview(i+nghostHalf,j+nghostHalf,k+nghostHalf).imag();
-           rhoPIFhalfview(iVec[0], iVec[1], iVec[2]) = rhoview(i+nghostHalf,j+nghostHalf,k+nghostHalf);
-       });
+       ////Heffte needs FFTshifted field whereas the field from cuFINUFFT
+       ////is not shifted. Hence, here we do the shift. 
+       //Kokkos::parallel_for("Transfer complex rho to half domain",
+       //                      mdrange_type({0, 0, 0},
+       //                                   {Nhalf[0],
+       //                                    Nhalf[1],
+       //                                    Nhalf[2]}),
+       //                      KOKKOS_LAMBDA(const int i,
+       //                                    const int j,
+       //                                    const int k)
+       //{
+       //    Vector<int, 3> iVec = {i, j, k};
+       //    int shift;
+       //    for(size_t d = 0; d < Dim; ++d) {
+       //        bool isLessThanHalf = (iVec[d] < (Nhalf[d]/2));
+       //        shift = ((int)isLessThanHalf * 2) - 1;
+       //        iVec[d] = (iVec[d] + shift * (Nhalf[d]/2)) + nghostHalf;
+       //    }
+       //    //rhoPIFhalfview(Nhalf[0]-1-i+nghostHalf, iVec[1], iVec[2]).real() = rhoview(i+nghostHalf,j+nghostHalf,k+nghostHalf).real();
+       //    //rhoPIFhalfview(Nhalf[0]-1-i+nghostHalf, iVec[1], iVec[2]).imag() = -rhoview(i+nghostHalf,j+nghostHalf,k+nghostHalf).imag();
+       //    rhoPIFhalfview(iVec[0], iVec[1], iVec[2]) = rhoview(i+nghostHalf,j+nghostHalf,k+nghostHalf);
+       //});
 
 
-       rhoPIFreal_m = 0.0;
-       //fft_mp->transform(-1, rhoPIFreal_m, rhoPIFhalf_m);
-       fft_mp->transform(-1, rhoPIFhalf_m);
-       auto rhoPIFrealview = rhoPIFreal_m.getView();
-
-       Kokkos::parallel_for("Get only real values",
-                             mdrange_type({0, 0, 0},
-                                          {N[0],
-                                           N[1],
-                                           N[2]}),
-                             KOKKOS_LAMBDA(const int i,
-                                           const int j,
-                                           const int k)
-       {
-           rhoPIFrealview(i+nghostHalf,j+nghostHalf,k+nghostHalf) = rhoPIFhalfview(i+nghostHalf,j+nghostHalf,k+nghostHalf).real();
-       });
-
-       rhoPIFreal_m = (1.0/(nr_m[0]*nr_m[1]*nr_m[2])) * volume * rhoPIFreal_m;
+       //rhoPIFreal_m = 0.0;
+       ////fft_mp->transform(-1, rhoPIFreal_m, rhoPIFhalf_m);
+       //fft_mp->transform(-1, rhoPIFhalf_m);
        //auto rhoPIFrealview = rhoPIFreal_m.getView();
-       temp = 0.0;
-       Kokkos::parallel_reduce("Rho real sum",
-                             mdrange_type({0, 0, 0},
-                                          {N[0],
-                                           N[1],
-                                           N[2]}),
-                             KOKKOS_LAMBDA(const int i,
-                                           const int j,
-                                           const int k,
-                                           double& valL)
-       {
-         
-           valL += rhoPIFrealview(i+nghost, j+nghost, k+nghost);
-       }, Kokkos::Sum<double>(temp));
 
-       double charge = temp;
+       //Kokkos::parallel_for("Get only real values",
+       //                      mdrange_type({0, 0, 0},
+       //                                   {N[0],
+       //                                    N[1],
+       //                                    N[2]}),
+       //                      KOKKOS_LAMBDA(const int i,
+       //                                    const int j,
+       //                                    const int k)
+       //{
+       //    rhoPIFrealview(i+nghostHalf,j+nghostHalf,k+nghostHalf) = rhoPIFhalfview(i+nghostHalf,j+nghostHalf,k+nghostHalf).real();
+       //});
 
-       auto rhoPIFFourierMagview = rhoPIFFourierMag_m.getView();
-       //Compute magnitude in Fourier space 
-       Kokkos::parallel_for("Rho mag. in Fourier space",
-                             mdrange_type({0, 0, 0},
-                                          {N[0],
-                                           N[1],
-                                           N[2]}),
-                             KOKKOS_LAMBDA(const int i,
-                                           const int j,
-                                           const int k)
-       {
-            
-            auto rho = rhoview(i+nghost,j+nghost,k+nghost);
-            rhoPIFFourierMagview(i+nghost, j+nghost, k+nghost) = std::sqrt(rho.real() * rho.real() 
-                                                                         + rho.imag() * rho.imag());
-       });
+       //rhoPIFreal_m = (1.0/(nr_m[0]*nr_m[1]*nr_m[2])) * volume * rhoPIFreal_m;
+       ////auto rhoPIFrealview = rhoPIFreal_m.getView();
+       //temp = 0.0;
+       //Kokkos::parallel_reduce("Rho real sum",
+       //                      mdrange_type({0, 0, 0},
+       //                                   {N[0],
+       //                                    N[1],
+       //                                    N[2]}),
+       //                      KOKKOS_LAMBDA(const int i,
+       //                                    const int j,
+       //                                    const int k,
+       //                                    double& valL)
+       //{
+       //  
+       //    valL += rhoPIFrealview(i+nghost, j+nghost, k+nghost);
+       //}, Kokkos::Sum<double>(temp));
+
+       //double charge = temp;
+
+       //auto rhoPIFFourierMagview = rhoPIFFourierMag_m.getView();
+       ////Compute magnitude in Fourier space 
+       //Kokkos::parallel_for("Rho mag. in Fourier space",
+       //                      mdrange_type({0, 0, 0},
+       //                                   {N[0],
+       //                                    N[1],
+       //                                    N[2]}),
+       //                      KOKKOS_LAMBDA(const int i,
+       //                                    const int j,
+       //                                    const int k)
+       //{
+       //     
+       //     auto rho = rhoview(i+nghost,j+nghost,k+nghost);
+       //     rhoPIFFourierMagview(i+nghost, j+nghost, k+nghost) = std::sqrt(rho.real() * rho.real() 
+       //                                                                  + rho.imag() * rho.imag());
+       //});
 
        Vector_t totalMomentum = 0.0;
        
@@ -614,7 +625,7 @@ public:
                   << potentialEnergy << " "
                   << kineticEnergy << " "
                   << potentialEnergy + kineticEnergy << " " 
-                  << charge << " "
+                  //<< charge << " "
                   << magMomentum << endl;
 
        }

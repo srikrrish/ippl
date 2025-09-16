@@ -486,7 +486,7 @@ namespace ippl {
 //
 //    }
 
-#ifdef KOKKOS_ENABLE_CUDA
+//#ifdef KOKKOS_ENABLE_CUDA
     
     template<typename T, class... Properties>
     template <unsigned Dim, class M, class C, class FT, class ST, class PT>
@@ -521,8 +521,8 @@ namespace ippl {
         
         IpplTimings::stopTimer(scatterPIFNUFFTTimer);
 	
-	int nRanksSpace;
-	MPI_Comm_size(spaceComm, &nRanksSpace);
+	    int nRanksSpace;
+	    MPI_Comm_size(spaceComm, &nRanksSpace);
 
 
 
@@ -646,7 +646,7 @@ namespace ippl {
         IpplTimings::stopTimer(gatherPIFNUFFTTimer);
 
     }
-#endif
+//#endif
 
     /*
      * Non-class functions
@@ -660,12 +660,12 @@ namespace ippl {
                  FFT<NUFFTransform, 3, P3>* nufft,
                  const MPI_Comm& spaceComm = MPI_COMM_WORLD)
     {
-#ifdef KOKKOS_ENABLE_CUDA
+//#ifdef KOKKOS_ENABLE_CUDA
         attrib.scatterPIFNUFFT(f, Sk, pp, nufft, spaceComm);
-#else
+//#else
         //throw IpplException("scatterPIFNUFFT", "The NUFFT library cuFINUFFT currently only works with CUDA and hence Kokkos needs to 
         //                     be compiled with CUDA. Otherwise use scatterPIFNUDFT.");
-#endif
+//#endif
     }
 
     template<typename P1, unsigned Dim, class M, class C, typename P2, typename P3, typename P4, class... Properties>
@@ -675,13 +675,13 @@ namespace ippl {
                  FFT<NUFFTransform, 3, P3>* nufft,
                  ParticleAttrib<P4, Properties... >& q)
     {
-#ifdef KOKKOS_ENABLE_CUDA
+//#ifdef KOKKOS_ENABLE_CUDA
         attrib.gatherPIFNUFFT(f, Sk, pp, nufft, q);
-#else
+//#else
         //throw IpplException("gatherPIFNUFFT",
         //                    "The NUFFT library cuFINUFFT currently only works with CUDA and hence Kokkos needs to 
         //                     be compiled with CUDA. Otherwise use gatherPIFNUDFT.");
-#endif
+//#endif
     }
 
 

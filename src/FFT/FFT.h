@@ -32,7 +32,7 @@
 #include <heffte_fft3d_r2c.h>
 #ifdef FINUFFT_USE_CUDA
 	#include <cufinufft.h>
-#elif FINUFFT_USE_CPU
+#else
 	#include <finufft.h>
 #endif
 #include <array>
@@ -158,9 +158,7 @@ namespace ippl {
             using plan_t      = cufinufft_plan;
         };
 #endif
-#endif
-
-#ifdef FINUFFT_USE_CPU
+#else
         template <>
         struct finufftType<float> {
             std::function<int(int, int, int64_t*, int, int, 
@@ -177,7 +175,7 @@ namespace ippl {
         template <>
         struct finufftType<double> {
             std::function<int(int, int, int64_t*, int, int, 
-                              double, cufinufft_plan*, cufinufft_opts*)> makeplan = finufft_makeplan; 
+                              double, finufft_plan*, finufft_opts*)> makeplan = finufft_makeplan; 
             std::function<int(finufft_plan, int64_t, double*, double*, double*, 
                               int64_t, double*, double*, double*)> setpts = finufft_setpts; 
             std::function<int(finufft_plan, std::complex<double>*, std::complex<double>*)> execute = finufft_execute; 
@@ -383,7 +381,7 @@ namespace ippl {
     };
 
 
-#ifdef KOKKOS_ENABLE_CUDA
+//#ifdef KOKKOS_ENABLE_CUDA
     /**
        Non-uniform FFT class
     */
@@ -398,22 +396,17 @@ namespace ippl {
 
         using complexType = typename detail::finufftType<T>::complexType;
         using plan_t = typename detail::finufftType<T>::plan_t;
-#ifdef KOKKOS_ENABLE_CUDA
+        //Using LayoutRight for CPUs has an issue 
         using view_field_type = typename detail::ViewType<complexType, 3, Kokkos::LayoutLeft>::view_type;
         using view_particle_real_type = typename detail::ViewType<T, 1, Kokkos::LayoutLeft>::view_type;
         using view_particle_complex_type = typename detail::ViewType<complexType, 1, Kokkos::LayoutLeft>::view_type;
-#else
-        using view_field_type = typename detail::ViewType<complexType, 3, Kokkos::LayoutRight>::view_type;
-        using view_particle_real_type = typename detail::ViewType<T, 1, Kokkos::LayoutRight>::view_type;
-        using view_particle_complex_type = typename detail::ViewType<complexType, 1, Kokkos::LayoutRight>::view_type;
-#endif
 
 
 
         FFT() = default;
 
         /** Create a new FFT object with the layout for the input Field, type 
-         * (1 or 2) for the NUFFT and parameters for cuFINUFFT.
+         * (1 or 2) for the NUFFT and parameters for FINUFFT.
         */
         FFT(const Layout_t& layout, const detail::size_type& localNp, int type, const ParameterList& params);
 
@@ -449,7 +442,7 @@ namespace ippl {
 
 
 }
-#endif
+//#endif
 #include "FFT/FFT.hpp"
 #endif // IPPL_FFT_FFT_H
 

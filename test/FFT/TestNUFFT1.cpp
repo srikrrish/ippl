@@ -119,12 +119,19 @@ int main(int argc, char *argv[]) {
 
     ippl::ParameterList fftParams;
 
+    fftParams.add("tolerance", 1e-12);
+#ifdef FINUFFT_USE_CUDA
     fftParams.add("gpu_method", 1);
     fftParams.add("gpu_sort", 0);
     fftParams.add("gpu_kerevalmeth", 1);
-    fftParams.add("tolerance", 1e-12);
+#else
+    fftParams.add("spread_kerevalmeth", 1);
+    fftParams.add("spread_sort", 2);
+    fftParams.add("nthreads", 0);
+#endif
 
-    fftParams.add("use_cufinufft_defaults", false);  
+
+    fftParams.add("use_finufft_defaults", false);  
     
     typedef ippl::FFT<ippl::NUFFTransform, 3, double> FFT_type;
 
