@@ -224,9 +224,10 @@ int main(int argc, char *argv[]){
     
     Vector_t rmin(0.0);
     Vector_t rmax = 2 * pi / kw ;
-    double dx = rmax[0] / nr[0];
-    double dy = rmax[1] / nr[1];
-    double dz = rmax[2] / nr[2];
+    Vector_t length = rmax - rmin;
+    double dx = length[0] / nr[0];
+    double dy = length[1] / nr[1];
+    double dz = length[2] / nr[2];
 
     Vector_t hr = {dx, dy, dz};
     Vector_t origin = {rmin[0], rmin[1], rmin[2]};
@@ -255,7 +256,7 @@ int main(int argc, char *argv[]){
     
     
     //Q = -\int\int f dx dv
-    double Q = -rmax[0] * rmax[1] * rmax[2];
+    double Q = -length[0] * length[1] * length[2];
     P = std::make_unique<bunch_type>(PL,hr,rmin,rmax,decomp,Q,Total_particles);
 
     P->nr_m = nr;
