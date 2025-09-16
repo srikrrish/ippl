@@ -278,9 +278,9 @@ int main(int argc, char *argv[]){
     ippl::NDIndex<Dim> domainPIFhalf;
 
     for(unsigned d = 0; d < Dim; ++d) {
-        if(fftParams.template get<int>("r2c_direction") == (int)d)
-            domainPIFhalf[d] = ippl::Index(domain[d].length()/2 + 1);
-        else
+        //if(fftParams.template get<int>("r2c_direction") == (int)d)
+        //    domainPIFhalf[d] = ippl::Index(domain[d].length()/2 + 1);
+        //else
             domainPIFhalf[d] = ippl::Index(domain[d].length());
     }
     
@@ -291,8 +291,13 @@ int main(int argc, char *argv[]){
     ippl::Vector<double, 3> originDummy = {0.0, 0.0, 0.0};
     Mesh_t meshPIFhalf(domainPIFhalf, hDummy, originDummy);
 
+    ippl::Vector<double, 3> hFourier = {2*pi/length[0], 2*pi/length[1], 2*pi/length[2]};
+    ippl::Vector<double, 3> originFourier = {-pi/hr[0], -pi/hr[1], -pi/hr[2]};
+    Mesh_t meshFourier(domain, hFourier, originFourier);
+
     P->rhoPIFreal_m.initialize(mesh, FL);
     P->rhoPIFhalf_m.initialize(meshPIFhalf, FLPIFhalf);
+    P->rhoPIFFourierMag_m.initialize(meshFourier, FL);
 
     //P->fft_mp = std::make_shared<FFT_t>(FL, FLPIFhalf, fftParams);
     P->fft_mp = std::make_shared<FFT_t>(FLPIFhalf, fftParams);
