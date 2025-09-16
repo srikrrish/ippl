@@ -57,7 +57,8 @@ namespace ippl {
     class ParticleSpatialLayout : public detail::ParticleLayout<T, Dim>
     {
     public:
-        using hash_type = typename ParticleBase<ParticleSpatialLayout<T, Dim, Mesh> >::hash_type;
+        //using hash_type = typename ParticleBase<ParticleSpatialLayout<T, Dim, Mesh> >::hash_type;
+        using hash_type = typename detail::ViewType<int, 1>::view_type;
         using locate_type = typename detail::ViewType<int, 1>::view_type;
         using bool_type = typename detail::ViewType<bool, 1>::view_type;
         using RegionLayout_t = detail::RegionLayout<T, Dim, Mesh>;
