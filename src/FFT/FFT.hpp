@@ -830,7 +830,7 @@ namespace ippl {
                                     const ParameterList& params)
     {
 
-#ifdef FINUFFT_USE_CUDA
+#ifdef ENABLE_GPU_NUFFT
         cufinufft_opts opts;
 	    cufinufft_default_opts(&opts);
 #else
@@ -841,7 +841,7 @@ namespace ippl {
 
         if(!params.get<bool>("use_finufft_defaults")) {
            tol_m = params.get<T>("tolerance");
-#ifdef FINUFFT_USE_CUDA
+#ifdef ENABLE_GPU_NUFFT
            opts.gpu_method = params.get<int>("gpu_method");
            opts.gpu_sort = params.get<int>("gpu_sort");
            opts.gpu_kerevalmeth = params.get<int>("gpu_kerevalmeth");
@@ -856,7 +856,7 @@ namespace ippl {
 #endif
         }
 
-#ifdef FINUFFT_USE_CUDA
+#ifdef ENABLE_GPU_NUFFT
 	    opts.gpu_maxbatchsize = 0; //default option. ignored for ntransf = 1 which
                                    // is our case
 	    //For Perlmutter since the mask to hide the other GPUs in the node is 
@@ -935,7 +935,7 @@ namespace ippl {
                                            const size_t j,
                                            const size_t k)
                              {
-#ifdef FINUFFT_USE_CUDA
+#ifdef ENABLE_GPU_NUFFT
                                  tempField(i-nghost, j-nghost, k-nghost).x =
                                        fview(i, j, k).real();
                                  tempField(i-nghost, j-nghost, k-nghost).y = 
@@ -957,7 +957,7 @@ namespace ippl {
                                     tempR[d](i) = Rview(i)[d] * (2.0 * pi / Len[d]);
                                     //tempR[d](i) = Rview(i)[d];
                                  }
-#ifdef FINUFFT_USE_CUDA
+#ifdef ENABLE_GPU_NUFFT
                                  tempQ(i).x = Qview(i);
                                  tempQ(i).y = 0.0;
 #else
@@ -985,7 +985,7 @@ namespace ippl {
                                                const size_t j,
                                                const size_t k)
                                  {
-#ifdef FINUFFT_USE_CUDA
+#ifdef ENABLE_GPU_NUFFT
                                      fview(i, j, k).real() =
                                      tempField(i-nghost, j-nghost, k-nghost).x;
                                      fview(i, j, k).imag() =
@@ -1004,7 +1004,7 @@ namespace ippl {
                                  localNp,
                                  KOKKOS_LAMBDA(const size_t i)
                                  {
-#ifdef FINUFFT_USE_CUDA
+#ifdef ENABLE_GPU_NUFFT
                                      Qview(i) = tempQ(i).x;
 #else
                                      Qview(i) = tempQ(i).real();

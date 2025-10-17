@@ -181,7 +181,7 @@ public:
         fftFineParams.add("tolerance", fineTol);
         fftCoarseParams.add("tolerance", coarseTol);
         
-#ifdef FINUFFT_USE_CUDA
+#ifdef ENABLE_GPU_NUFFT
         fftFineParams.add("gpu_method", 2);
         fftFineParams.add("gpu_sort", 0);
         fftFineParams.add("gpu_kerevalmeth", 1);

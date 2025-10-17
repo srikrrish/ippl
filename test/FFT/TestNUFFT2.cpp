@@ -140,7 +140,7 @@ int main(int argc, char *argv[]) {
     ippl::ParameterList fftParams;
     
     fftParams.add("tolerance", 1e-10);
-#ifdef FINUFFT_USE_CUDA
+#ifdef ENABLE_GPU_NUFFT
     fftParams.add("gpu_method", 1);
     fftParams.add("gpu_sort", 0);
     fftParams.add("gpu_kerevalmeth", 1);

@@ -30,7 +30,7 @@
 
 #include <heffte_fft3d.h>
 #include <heffte_fft3d_r2c.h>
-#ifdef FINUFFT_USE_CUDA
+#ifdef ENABLE_GPU_NUFFT
 	#include <cufinufft.h>
 #else
 	#include <finufft.h>
@@ -129,7 +129,7 @@ namespace ippl {
 
         template <class T>
         struct finufftType;
-#ifdef FINUFFT_USE_CUDA
+#ifdef ENABLE_GPU_NUFFT
 #ifdef KOKKOS_ENABLE_CUDA
 
         template <>
