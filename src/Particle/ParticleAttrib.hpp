@@ -23,6 +23,7 @@
 #include "Interpolation/AtomicGather.h"
 #include "Interpolation/AtomicScatter.h"
 #include "Interpolation/Binning.h"
+#include "Interpolation/OutputFocusedScatter.h"
 #include "Interpolation/ScatterConfig.h"
 #include "Interpolation/TiledGather.h"
 #include "Interpolation/TiledScatter.h"
@@ -265,7 +266,9 @@ namespace ippl {
         const size_t nParticles = *(this->localNum_mp);
 
         // Dispatch based on spread method
-        if (config.method == Interpolation::ScatterMethod::Tiled && Dim == 3) {
+        if ((config.method == Interpolation::ScatterMethod::Tiled
+             || config.method == Interpolation::ScatterMethod::OutputFocused)
+            && Dim == 3) {
             using size_type = typename execution_space::memory_space::size_type;
 
             // Prepare grid dimensions - use GLOBAL for binning
@@ -301,12 +304,24 @@ namespace ippl {
 
             // Dispatch to templated scatter functor based on kernel width
             constexpr int MaxW = 20;
-            Interpolation::detail::ScatterDispatcher<1, MaxW>::template dispatch_3d<
-                PositionType, execution_space, Kernel, T, view_type, decltype(pp_view),
-                decltype(permute), decltype(bin_offsets)>(
-                w, bin_offsets, permute, pp_view, dview_m, full_view, n_grid_arr, n_grid_local_arr,
-                local_offset_arr, num_tiles, config.tile_size_3d, config.tile_size_3d,
-                config.tile_size_3d, config.z_tiles, nghost, inv_hw, kernel, config.team_size);
+            if (config.method == Interpolation::ScatterMethod::Tiled) {
+                Interpolation::detail::ScatterDispatcher<1, MaxW>::template dispatch_3d<
+                    PositionType, execution_space, Kernel, T, view_type, decltype(pp_view),
+                    decltype(permute), decltype(bin_offsets)>(
+                    w, bin_offsets, permute, pp_view, dview_m, full_view, n_grid_arr,
+                    n_grid_local_arr, local_offset_arr, num_tiles, config.tile_size_3d,
+                    config.tile_size_3d, config.tile_size_3d, config.z_tiles, nghost, inv_hw,
+                    kernel, config.team_size);
+            } else if (config.method == Interpolation::ScatterMethod::OutputFocused) {
+                Interpolation::detail::OutputFocusedScatterDispatcher<
+                    1, MaxW>::template dispatch_3d<PositionType, execution_space, Kernel, T,
+                                                   view_type, decltype(pp_view), decltype(permute),
+                                                   decltype(bin_offsets)>(
+                    w, bin_offsets, permute, pp_view, dview_m, full_view, n_grid_arr,
+                    n_grid_local_arr, local_offset_arr, num_tiles, config.tile_size_3d,
+                    config.tile_size_3d, config.tile_size_3d, config.z_tiles, nghost, inv_hw,
+                    kernel, config.team_size);
+            }
 
             IpplTimings::stopTimer(scatterKernelTimer);
             return;
@@ -382,8 +397,15 @@ namespace ippl {
         if constexpr (Dim == 3) {
             if (config.method == Interpolation::ScatterMethod::Tiled) {
                 // Use optimized tiled interpolation with warp-level parallelism
+#if defined(KOKKOS_ENABLE_CUDA) || defined(KOKKOS_ENABLE_HIP)
+                if constexpr (
 #ifdef KOKKOS_ENABLE_CUDA
-                if constexpr (std::is_same_v<execution_space, Kokkos::Cuda>) {
+                    std::is_same_v<execution_space, Kokkos::Cuda>
+#endif
+#ifdef KOKKOS_ENABLE_HIP
+                        std::is_same_v<execution_space, Kokkos::HIP>
+#endif
+                ) {
                     // Verify field has sufficient ghost cells for kernel width
                     if (nghost < hw) {
                         throw std::runtime_error(
@@ -410,7 +432,7 @@ namespace ippl {
                     detail::sortParticles<3, execution_space, PositionType>(
                         x_view, permute, origin, invdx, ngrid_vec, nParticles);
 
-                    // Dispatch to CUDA kernel
+                    // Dispatch to specialized kernel
                     constexpr int MaxW = 20;
                     int n0 = ngrid_global[0], n1 = ngrid_global[1], n2 = ngrid_global[2];
                     Interpolation::detail::CudaGatherDispatcher<1, MaxW>::template dispatch_3d<
@@ -419,7 +441,7 @@ namespace ippl {
                                    ngrid_global, ngrid_local, local_offset, inv_hw, kernel,
                                    addToAttribute);
 
-                    cudaDeviceSynchronize();
+                    Kokkos::fence();
                 } else
 #endif
                 {
@@ -472,7 +494,7 @@ namespace ippl {
                 Kokkos::parallel_for("atomic_gather", policy_type(0, nParticles), gather_functor);
             }
         } else {
-            // TODO: Implement for 1D/2D if needed
+            // Currently not implemented
         }
 
         IpplTimings::stopTimer(gatherKernelTimer);
@@ -543,27 +565,27 @@ namespace ippl {
 
         IpplTimings::stopTimer(scatterPIFNUFFTTimer);
 
-        //int nRanksSpace;
-        //MPI_Comm_size(spaceComm, &nRanksSpace);
+        // int nRanksSpace;
+        // MPI_Comm_size(spaceComm, &nRanksSpace);
 
-        //static IpplTimings::TimerRef scatterAllReducePIFTimer =
-        //    IpplTimings::getTimer("scatterAllReducePIF");
-        //IpplTimings::startTimer(scatterAllReducePIFTimer);
-        //if (nRanksSpace > 1) {
-        //    // Cray MPI has problems reducing complex data type GPU-aware so do this trick to
-        //    // speed up
-        //    double* raw_ptr_viewLocal = reinterpret_cast<double*>(viewLocal.data());
-        //    double* raw_ptr_fview     = reinterpret_cast<double*>(fview.data());
-        //    int viewSize              = fview.extent(0) * fview.extent(1) * fview.extent(2);
-        //    // MPI_Allreduce(viewLocal.data(), fview.data(), viewSize,
-        //    //               MPI_C_DOUBLE_COMPLEX, MPI_SUM, spaceComm);
-        //    MPI_Allreduce(raw_ptr_viewLocal, raw_ptr_fview, 2 * viewSize, MPI_DOUBLE, MPI_SUM,
-        //                  spaceComm);
+        // static IpplTimings::TimerRef scatterAllReducePIFTimer =
+        //     IpplTimings::getTimer("scatterAllReducePIF");
+        // IpplTimings::startTimer(scatterAllReducePIFTimer);
+        // if (nRanksSpace > 1) {
+        //     // Cray MPI has problems reducing complex data type GPU-aware so do this trick to
+        //     // speed up
+        //     double* raw_ptr_viewLocal = reinterpret_cast<double*>(viewLocal.data());
+        //     double* raw_ptr_fview     = reinterpret_cast<double*>(fview.data());
+        //     int viewSize              = fview.extent(0) * fview.extent(1) * fview.extent(2);
+        //     // MPI_Allreduce(viewLocal.data(), fview.data(), viewSize,
+        //     //               MPI_C_DOUBLE_COMPLEX, MPI_SUM, spaceComm);
+        //     MPI_Allreduce(raw_ptr_viewLocal, raw_ptr_fview, 2 * viewSize, MPI_DOUBLE, MPI_SUM,
+        //                   spaceComm);
 
         //} else {
-            Kokkos::deep_copy(fview, viewLocal);
+        Kokkos::deep_copy(fview, viewLocal);
         //}
-        //IpplTimings::stopTimer(scatterAllReducePIFTimer);
+        // IpplTimings::stopTimer(scatterAllReducePIFTimer);
 
         IpplTimings::startTimer(scatterPIFNUFFTTimer);
 
@@ -593,7 +615,7 @@ namespace ippl {
 
         FieldLayout<Dim>& layout = f.getLayout();
         M& mesh                  = f.get_mesh();
-        const auto& lDom   = layout.getLocalNDIndex();
+        const auto& lDom         = layout.getLocalNDIndex();
 
         tempField.initialize(mesh, layout);
 
@@ -635,9 +657,9 @@ namespace ippl {
 
                     double Dr = 0.0;
                     for (size_t d = 0; d < Dim; ++d) {
-                    	bool shift            = (iVec[d] > (N[d] / 2));
-                    	kVec[d]               = 2 * pi / Len[d] * (iVec[d] - shift * N[d]);
-                        //kVec[d] = 2 * pi / Len[d] * (iVec[d] - (N[d] / 2));
+                        bool shift = (iVec[d] > (N[d] / 2));
+                        kVec[d]    = 2 * pi / Len[d] * (iVec[d] - shift * N[d]);
+                        // kVec[d] = 2 * pi / Len[d] * (iVec[d] - (N[d] / 2));
                         Dr += kVec[d] * kVec[d];
                     }
 

@@ -118,7 +118,6 @@ int main(int argc, char* argv[]) {
 
         // Number of modes (output size before upsampling)
         ippl::Vector<int, dim> n_modes = {64, 64, 64};
-
         // ippl::Vector<int, dim> n_modes = {8, 8, 8};
 
         ippl::Index I(n_modes[0]);
@@ -176,7 +175,7 @@ int main(int argc, char* argv[]) {
         fftParams.add("use_finufft_defaults", false);
         fftParams.add("use_kokkos_nufft", false);
 
-        fftParams.add("spread_method", "tiled");
+        fftParams.add("spread_method", "output_focused");
         fftParams.add("tile_size_3d", 6);
         fftParams.add("z_tiles", 1);
         fftParams.add("team_size", 32);

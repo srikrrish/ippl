@@ -1,5 +1,5 @@
-#ifndef IPPL_TILED_SCATTER_H
-#define IPPL_TILED_SCATTER_H
+#ifndef IPPL_OUTPUTFOCUSED_SCATTER_H
+#define IPPL_OUTPUTFOCUSED_SCATTER_H
 
 #include <Kokkos_Core.hpp>
 
@@ -11,10 +11,7 @@ namespace ippl {
     namespace Interpolation {
         namespace detail {
             /**
-             * @brief Generic tiled scatter functor for 3D particle-to-grid operations
-             *
-             * This is a generic implementation that works with any kernel function.
-             * Uses shared memory histogram per tile to reduce global memory atomics.
+             * @brief Generic scatter functor with the julia-like algorithm
              *
              * Template parameters:
              * @tparam W The kernel width (compile-time constant for optimization)
@@ -32,7 +29,7 @@ namespace ippl {
                       typename ValueType, typename GridViewType,
                       typename PositionViewType =
                           Kokkos::View<RealType* [3], typename ExecSpace::memory_space>>
-            struct TiledScatterFunctor3D {
+            struct OutputFocusedScatterFunctor3D {
                 using real_type        = RealType;
                 using value_type       = ValueType;
                 using memory_space     = typename ExecSpace::memory_space;
@@ -91,7 +88,7 @@ namespace ippl {
                 }
 
                 KOKKOS_INLINE_FUNCTION void operator()(const team_member& team) const {
-                    const int team_id     = team.league_rank();
+                    const int team_id = team.league_rank();
                     // const int num_threads = team.team_size();
                     // const int thread_id   = team.team_rank();
 
@@ -145,94 +142,67 @@ namespace ippl {
                     });
                     team.team_barrier();
 
+                    // Allocate shared memory for kernel values
+                    const int z_count = (tile_thread_idx == threads_per_tile - 1)
+                                            ? (W - (threads_per_tile - 1) * z_tiles)
+                                            : z_tiles;
+                    shared_real_view kernel_vals(team.team_scratch(0), 2 * W + z_count);
+
                     // Get particles in this tile
                     const size_type pstart = bin_offsets(tile_linear);
                     const size_type pend   = bin_offsets(tile_linear + 1);
 
-                    // Process particles
-                    Kokkos::parallel_for(
-                        Kokkos::TeamThreadRange(team, pstart, pend), [&](size_type ip) {
-                            const size_type j    = permute(ip);
-                            const value_type val = values(j);
+                    for (int i = pstart; i < pend; ++i) {
+                        const size_type j    = permute(i);
+                        const value_type val = values(j);
 
-                            // X dimension
-                            real_type sx = scale_to_grid_indices(get_component(x, j, 0), n_grid[0]);
-                            // The indices are chosen so that there are non-zero contributions from
-                            // sx in the range [idx_x, idx_x + w)
-                            int idx_x = grid_point_to_grid_idx(sx, n_grid[0], w) - half_left;
+                        real_type s[3];
+                        int idx[3];
 
-                            // Y dimension
-                            real_type sy = scale_to_grid_indices(get_component(x, j, 1), n_grid[1]);
-                            int idx_y    = grid_point_to_grid_idx(sy, n_grid[1], w) - half_left;
+                        for (int d = 0; d < 3; ++d) {
+                            s[d]   = scale_to_grid_indices(get_component(x, j, d), n_grid[d]);
+                            idx[d] = grid_point_to_grid_idx(s[d], n_grid[d], w) - half_left;
+                        }
 
-                            // Z dimension
-                            real_type sz = scale_to_grid_indices(get_component(x, j, 2), n_grid[2]);
-                            int idx_z    = grid_point_to_grid_idx(sz, n_grid[2], w) - half_left;
+                        Kokkos::parallel_for(
+                            Kokkos::TeamThreadRange(team, 2 * W + z_count), [&](int flat_w) {
+                                int d = flat_w / w;
+                                int k = flat_w % w;
 
-                            // Precompute kernel values
-                            real_type kernel_x[W];
-                            real_type kernel_y[W];
-                            real_type kernel_z[W];
+                                kernel_vals[W * d + k] = kernel(
+                                    (s[d]
+                                     - static_cast<real_type>(idx[d] + k + (d == 2) * z_offset))
+                                    * inv_hw);
+                            });
 
-                            for (int wx = 0; wx < W; ++wx) {
-                                kernel_x[wx] =
-                                    kernel((sx - static_cast<real_type>(idx_x + wx)) * inv_hw);
-                            }
-                            for (int wy = 0; wy < W; ++wy) {
-                                kernel_y[wy] =
-                                    kernel((sy - static_cast<real_type>(idx_y + wy)) * inv_hw);
-                            }
+                        Kokkos::parallel_for(
+                            Kokkos::TeamThreadMDRange(team, W, W, z_count),
+                            [&](int wx, int wy, int wz) {
+                                const real_type kernel_val =
+                                    kernel_vals[wx] * kernel_vals[W + wy] * kernel_vals[2 * W + wz];
 
-                            // Determine z range for this thread (match old code)
-                            const int z_count = (tile_thread_idx == threads_per_tile - 1)
-                                                    ? (W - (threads_per_tile - 1) * z_tiles)
-                                                    : z_tiles;
+                                const int point_tile_x = idx[0] + half_left - tile_x0;
+                                const int point_tile_y = idx[1] + half_left - tile_y0;
+                                const int point_tile_z = idx[2] + half_left - tile_z0;
 
-                            for (int wz = 0; wz < z_count; ++wz) {
-                                kernel_z[wz] = kernel(
-                                    (sz - static_cast<real_type>(idx_z + wz + z_offset)) * inv_hw);
-                            }
+                                const int hist_idx =
+                                    (((point_tile_z + wz) * hy + (point_tile_y + wy)) * hx
+                                     + (point_tile_x + wx));
 
-                            // Spread to histogram
-                            for (int wz = 0; wz < z_count; ++wz) {
-                                for (int wy = 0; wy < W; ++wy) {
-                                    for (int wx = 0; wx < W; ++wx) {
-                                        const real_type kernel_val =
-                                            kernel_x[wx] * kernel_y[wy] * kernel_z[wz];
-
-                                        const int point_tile_x = idx_x + half_left - tile_x0;
-                                        const int point_tile_y = idx_y + half_left - tile_y0;
-                                        const int point_tile_z = idx_z + half_left - tile_z0;
-
-                                        const int hist_idx =
-                                            (((point_tile_z + wz) * hy + (point_tile_y + wy)) * hx
-                                             + (point_tile_x + wx));
-
-
-                                        if constexpr (value_is_complex && grid_is_complex) {
-                                            // Complex values to complex grid
-                                            Kokkos::atomic_add(&hist_r(hist_idx),
-                                                               val.real() * kernel_val);
-                                            Kokkos::atomic_add(&hist_c(hist_idx),
-                                                               val.imag() * kernel_val);
-                                        } else if constexpr (!value_is_complex && grid_is_complex) {
-                                            // Real values to complex grid (scatter to real part
-                                            // only)
-                                            Kokkos::atomic_add(&hist_r(hist_idx), val * kernel_val);
-                                        } else {
-                                            // Real values to real grid
-                                            Kokkos::atomic_add(&hist_r(hist_idx), val * kernel_val);
-                                        }
-                                    }
+                                if constexpr (value_is_complex && grid_is_complex) {
+                                    // Complex values to complex grid
+                                    hist_r(hist_idx) += val.real() * kernel_val;
+                                    hist_c(hist_idx) += val.imag() * kernel_val;
+                                } else if constexpr (!value_is_complex && grid_is_complex) {
+                                    hist_r(hist_idx) += val * kernel_val;
+                                } else {
+                                    // Real values to real grid
+                                    hist_r(hist_idx) += val * kernel_val;
                                 }
-                            }
-                        });
-
+                            });
+                    }
                     team.team_barrier();
 
-                    // Flush histogram to global grid
-                    // No periodic wrapping - write to ghosts, will be accumulated with
-                    // accumulateHalo()
                     Kokkos::parallel_for(
                         Kokkos::TeamThreadRange(team, hist_total), [&](int hist_idx) {
                             int hist_x = hist_idx % hx;
@@ -250,13 +220,16 @@ namespace ippl {
                             int local_z = global_z - local_offset[2];
 
                             // Check if within LOCAL domain (including ghosts)
-                            if (local_x < -nghost || local_x >= static_cast<int>(n_grid_local[0]) + nghost
-                                || local_y < -nghost || local_y >= static_cast<int>(n_grid_local[1]) + nghost
-                                || local_z < -nghost || local_z >= static_cast<int>(n_grid_local[2]) + nghost) {
+                            if (local_x < -nghost
+                                || local_x >= static_cast<int>(n_grid_local[0]) + nghost
+                                || local_y < -nghost
+                                || local_y >= static_cast<int>(n_grid_local[1]) + nghost
+                                || local_z < -nghost
+                                || local_z >= static_cast<int>(n_grid_local[2]) + nghost) {
                                 return;
                             }
 
-                            // Use LOCAL indices for grid access
+                            // Use local indices for grid access
                             if constexpr (grid_is_complex) {
 #ifdef KOKKOS_ENABLE_CUDA
                                 if constexpr (std::is_same_v<ExecSpace, Kokkos::Cuda>) {
@@ -267,10 +240,10 @@ namespace ippl {
                                 } else
 #endif
                                 {
-                                    Kokkos::atomic_add(&grid(local_x + nghost, local_y + nghost,
-                                                             local_z + nghost),
-                                                       Kokkos::complex<real_type>(
-                                                           hist_r(hist_idx), hist_c(hist_idx)));
+                                    Kokkos::atomic_add(
+                                        &grid(local_x + nghost, local_y + nghost, local_z + nghost),
+                                        Kokkos::complex<real_type>(hist_r(hist_idx),
+                                                                   hist_c(hist_idx)));
                                 }
                             } else {
                                 Kokkos::atomic_add(
@@ -286,7 +259,7 @@ namespace ippl {
              * Uses template recursion to dispatch to the correct kernel width at runtime
              */
             template <int W, int MaxW>
-            struct ScatterDispatcher {
+            struct OutputFocusedScatterDispatcher {
                 template <typename RealType, typename ExecSpace, typename KernelType,
                           typename ValueType, typename GridViewType, typename PositionViewType,
                           typename PermuteViewType, typename BinOffsetsViewType>
@@ -303,43 +276,42 @@ namespace ippl {
                     RealType inv_hw, const KernelType& kernel, int team_size) {
                     if constexpr (W <= MaxW) {
                         if (w == W) {
-                            {
-                                // Use generic Kokkos functor for other execution spaces
-                                using size_type = typename ExecSpace::memory_space::size_type;
+                            // Use generic Kokkos functor for other execution spaces
+                            using size_type = typename ExecSpace::memory_space::size_type;
 
-                                // Create functor with templated W
-                                TiledScatterFunctor3D<W, RealType, ExecSpace, KernelType, ValueType,
-                                                      GridViewType, PositionViewType>
-                                    functor{bin_offsets, permute,      x,            values,
-                                            grid,        n_grid,       n_grid_local, local_offset,
-                                            num_tiles,   tile_size_x,  tile_size_y,  tile_size_z,
-                                            z_tiles,     nghost,       inv_hw,       kernel};
+                            // Create functor with templated W
+                            OutputFocusedScatterFunctor3D<W, RealType, ExecSpace, KernelType,
+                                                          ValueType, GridViewType, PositionViewType>
+                                functor{bin_offsets,  permute,      x,
+                                        values,       grid,         n_grid,
+                                        n_grid_local, local_offset, num_tiles,
+                                        tile_size_x,  tile_size_y,  tile_size_z,
+                                        z_tiles,      nghost,       inv_hw,
+                                        kernel};
 
-                                // Calculate scratch memory size
-                                const size_t hist_size = functor.hist_size_x()
-                                                         * functor.hist_size_y()
-                                                         * functor.hist_size_z();
-                                using grid_element_type =
-                                    std::remove_reference_t<decltype(grid(0, 0, 0))>;
-                                constexpr bool is_complex =
-                                    std::is_same_v<grid_element_type, Kokkos::complex<RealType>>;
-                                const size_t scratch_size  = is_complex ? 2 * hist_size : hist_size;
-                                const size_t scratch_bytes = scratch_size * sizeof(RealType);
+                            // Calculate scratch memory size
+                            const size_t hist_size = functor.hist_size_x() * functor.hist_size_y()
+                                                     * functor.hist_size_z();
+                            using grid_element_type =
+                                std::remove_reference_t<decltype(grid(0, 0, 0))>;
+                            constexpr bool is_complex =
+                                std::is_same_v<grid_element_type, Kokkos::complex<RealType>>;
+                            const size_t scratch_size  = is_complex ? (2 * hist_size + (2 * W + z_tiles)) : (hist_size + (2 * W + z_tiles));
+                            const size_t scratch_bytes = scratch_size * sizeof(RealType);
 
-                                // Launch team policy
-                                const size_type n_tiles_total =
-                                    num_tiles[0] * num_tiles[1] * num_tiles[2];
-                                const int threads_per_tile = (z_tiles + W - 1) / z_tiles;
-                                const size_type n_teams    = n_tiles_total * threads_per_tile;
+                            // Launch team policy
+                            const size_type n_tiles_total =
+                                num_tiles[0] * num_tiles[1] * num_tiles[2];
+                            const int threads_per_tile = (z_tiles + W - 1) / z_tiles;
+                            const size_type n_teams    = n_tiles_total * threads_per_tile;
 
-                                using team_policy = Kokkos::TeamPolicy<ExecSpace>;
-                                team_policy policy(n_teams, team_size);
-                                policy = policy.set_scratch_size(0, Kokkos::PerTeam(scratch_bytes));
+                            using team_policy = Kokkos::TeamPolicy<ExecSpace>;
+                            team_policy policy(n_teams, team_size);
+                            policy = policy.set_scratch_size(0, Kokkos::PerTeam(scratch_bytes));
 
-                                Kokkos::parallel_for("tiled_spread", policy, functor);
-                            }
+                            Kokkos::parallel_for("output_focused_spread", policy, functor);
                         } else {
-                            ScatterDispatcher<W + 1, MaxW>::template dispatch_3d<
+                            OutputFocusedScatterDispatcher<W + 1, MaxW>::template dispatch_3d<
                                 RealType, ExecSpace, KernelType, ValueType, GridViewType,
                                 PositionViewType, PermuteViewType, BinOffsetsViewType>(
                                 w, bin_offsets, permute, x, values, grid, n_grid, n_grid_local,
