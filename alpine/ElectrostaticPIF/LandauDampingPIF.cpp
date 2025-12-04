@@ -164,14 +164,11 @@ int main(int argc, char* argv[]) {
         const unsigned int nt  = std::atoi(argv[5]);
         const double dt        = std::atof(argv[6]);
 
-        double factor             = 1.0 / ippl::Comm->size();
-        size_type nloc            = (size_type)(factor * totalP);
-        size_type Total_particles = 0;
+        //double factor             = 1.0 / ippl::Comm->size();
+        //size_type nloc            = (size_type)(factor * totalP);
+        //size_type Total_particles = 0;
 
-        MPI_Allreduce(&nloc, &Total_particles, 1, MPI_UNSIGNED_LONG, MPI_SUM, ippl::Comm->getCommunicator());
-
-        msg << "Landau damping" << endl
-            << "nt " << nt << " Np= " << Total_particles << " Fourier modes = " << nr << endl;
+        //MPI_Allreduce(&nloc, &Total_particles, 1, MPI_UNSIGNED_LONG, MPI_SUM, ippl::Comm->getCommunicator());
 
         using bunch_type = ChargedParticlesPIF<PLayout_t>;
 
@@ -213,15 +210,6 @@ int main(int argc, char* argv[]) {
 
         PLayout_t PL(FLOrig, meshOrig);
 
-        // Q = -\int\int f dx dv
-        double Q = -length[0] * length[1] * length[2];
-        P        = std::make_unique<bunch_type>(PL, hr, rmin, rmax, isParallel, Q, Total_particles);
-
-        P->nr_m = nr;
-
-        P->rho_m.initialize(mesh, FL);
-        P->rhoDFT_m.initialize(mesh, FL);
-        P->Sk_m.initialize(mesh, FL);
 
         ////////////////////////////////////////////////////////////
         // Initialize an FFT object for getting rho in real space and
@@ -264,23 +252,51 @@ int main(int argc, char* argv[]) {
 
         ////////////////////////////////////////////////////////////
 
+
+        IpplTimings::startTimer(particleCreation);
+
+	typedef ippl::detail::RegionLayout<double, Dim, Mesh_t>::uniform_type RegionLayout_t;
+        const RegionLayout_t& RLayout                           = PL.getRegionLayout();
+        const typename RegionLayout_t::host_mirror_type Regions = RLayout.gethLocalRegions();
+        Vector_t Nr, Dr, minU, maxU;
+        int myRank    = ippl::Comm->rank();
+        double factor = 1;
+        for (unsigned d = 0; d < Dim; ++d) {
+            Nr[d] = CDF(Regions(myRank)[d].max(), alpha, kw[d])
+                    - CDF(Regions(myRank)[d].min(), alpha, kw[d]);
+            Dr[d]   = CDF(rmax[d], alpha, kw[d]) - CDF(rmin[d], alpha, kw[d]);
+            minU[d] = CDF(Regions(myRank)[d].min(), alpha, kw[d]);
+            maxU[d] = CDF(Regions(myRank)[d].max(), alpha, kw[d]);
+            factor *= Nr[d] / Dr[d];
+        }
+
+
+	size_type nloc            = (size_type)(factor * totalP);
+        size_type Total_particles = 0;
+
+        MPI_Allreduce(&nloc, &Total_particles, 1, MPI_UNSIGNED_LONG, MPI_SUM,
+                      ippl::Comm->getCommunicator());
+
+        int rest = (int)(totalP - Total_particles);
+
+        if (ippl::Comm->rank() < rest) {
+            ++nloc;
+        }
+
+        // Q = -\int\int f dx dv
+        double Q = -length[0] * length[1] * length[2];
+        P        = std::make_unique<bunch_type>(PL, hr, rmin, rmax, isParallel, Q, Total_particles);
+
+        P->nr_m = nr;
+
         P->time_m = 0.0;
 
         P->shapetype_m   = argv[7];
         P->shapedegree_m = std::atoi(argv[8]);
 
-        IpplTimings::startTimer(particleCreation);
-
-        Vector_t minU, maxU;
-        for (unsigned d = 0; d < Dim; ++d) {
-            minU[d] = CDF(rmin[d], alpha, kw[d]);
-            maxU[d] = CDF(rmax[d], alpha, kw[d]);
-        }
-
-        // int rest = (int) (totalP - Total_particles);
-
-        // if ( Ippl::Comm->rank() < rest )
-        //     ++nloc;
+        P->rho_m.initialize(mesh, FL);
+        P->rhoDFT_m.initialize(mesh, FL);
+        P->Sk_m.initialize(mesh, FL);
 
         P->create(nloc);
         Kokkos::Random_XorShift64_Pool<> rand_pool64((size_type)(42 + 100 * ippl::Comm->rank()));
@@ -291,6 +307,9 @@ int main(int argc, char* argv[]) {
         Kokkos::fence();
         ippl::Comm->barrier();
         IpplTimings::stopTimer(particleCreation);
+
+        msg << "Landau damping" << endl
+            << "nt " << nt << " Np= " << Total_particles << " Fourier modes = " << nr << endl;
 
         P->q = P->Q_m / Total_particles;
         msg << "particles created and initial conditions assigned " << endl;
