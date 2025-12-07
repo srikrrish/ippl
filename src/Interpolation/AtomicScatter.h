@@ -86,9 +86,6 @@ namespace ippl {
                             // Convert to local index
                             idx_local[d] = idx_global[d] - local_offset[d];
 
-                            assert(idx_local[d] >= -nghost
-                                   && idx_local[d] < n_grid_local[d] + nghost);
-
                             // Multiply by kernel value
                             kernel_val *=
                                 kernel((pos[d] - static_cast<real_type>(idx0[d] + k)) * inv_hw);

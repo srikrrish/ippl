@@ -53,7 +53,6 @@ namespace ippl {
                 Kokkos::Array<int, 3> local_offset;        // First global index of local domain
                 Kokkos::Array<size_type, 3> num_tiles;
                 int tile_size_x, tile_size_y, tile_size_z;
-                int z_tiles;       // z-dimension splitting for parallelism
                 int nghost;        // ghost cell offset for field
                 real_type inv_hw;  // 1 / half_width for kernel scaling
                 KernelType kernel;
@@ -83,31 +82,20 @@ namespace ippl {
 
                 KOKKOS_INLINE_FUNCTION constexpr int hist_size_y() const { return tile_size_y + W; }
 
-                KOKKOS_INLINE_FUNCTION constexpr int hist_size_z() const {
-                    return tile_size_z + z_tiles;
-                }
+                KOKKOS_INLINE_FUNCTION constexpr int hist_size_z() const { return tile_size_z + W; }
 
                 KOKKOS_INLINE_FUNCTION void operator()(const team_member& team) const {
                     const int team_id = team.league_rank();
                     // const int num_threads = team.team_size();
                     // const int thread_id   = team.team_rank();
 
-                    // Decode team_id to tile and z-slice
-                    // We split the w loop into threads_per_tile loops in the z direction
-                    // z_tiles is the number of work iterms from the wz loop we work in in this
-                    // block
-                    const int threads_per_tile  = (z_tiles + w - 1) / z_tiles;
-                    const size_type tile_linear = team_id / threads_per_tile;
-                    const int tile_thread_idx   = team_id % threads_per_tile;
-                    const int z_offset          = z_tiles * tile_thread_idx;
-
-                    // const int tiles_per_xy = num_tiles[0] * num_tiles[1];
+                    const size_type tile_linear = team_id;
 
                     const int tile_x = tile_linear % num_tiles[0];
                     const int tile_y = (tile_linear / num_tiles[0]) % num_tiles[1];
                     const int tile_z = tile_linear / (num_tiles[0] * num_tiles[1]);
 
-                    // Tile bounds in grid coordinates
+                    // Tile bounds in local grid coordinates
                     const int tile_x0 = tile_x * tile_size_x;
                     const int tile_y0 = tile_y * tile_size_y;
                     const int tile_z0 = tile_z * tile_size_z;
@@ -143,10 +131,7 @@ namespace ippl {
                     team.team_barrier();
 
                     // Allocate shared memory for kernel values
-                    const int z_count = (tile_thread_idx == threads_per_tile - 1)
-                                            ? (W - (threads_per_tile - 1) * z_tiles)
-                                            : z_tiles;
-                    shared_real_view kernel_vals(team.team_scratch(0), 2 * W + z_tiles);
+                    shared_real_view kernel_vals(team.team_scratch(0), 3 * W);
 
                     // Get particles in this tile
                     const size_type pstart = bin_offsets(tile_linear);
@@ -160,34 +145,31 @@ namespace ippl {
                         int idx[3];
 
                         for (int d = 0; d < 3; ++d) {
-                            s[d]   = scale_to_grid_indices(get_component(x, j, d), n_grid[d]);
-                            idx[d] = grid_point_to_grid_idx(s[d], n_grid[d], w) - half_left;
+                            // Convert physical position to global grid coordinates
+                            real_type s_global = scale_to_grid_indices(get_component(x, j, d), n_grid[d]);
+                            int global_idx = grid_point_to_grid_idx(s_global, n_grid[d], w);
+
+                            // Convert to local coordinates (preserving fractional part for kernel evaluation)
+                            s[d] = s_global - static_cast<real_type>(local_offset[d]);
+                            idx[d] = global_idx - local_offset[d] - half_left;
                         }
 
-                        Kokkos::parallel_for(
-                            Kokkos::TeamThreadRange(team, 2 * W + z_count), [&](int flat_w) {
-                                int d = flat_w / w;
-                                int k = flat_w % w;
+                        Kokkos::parallel_for(Kokkos::TeamThreadRange(team, 3 * W), [&](int flat_w) {
+                            int d = flat_w / w;
+                            int k = flat_w % w;
 
-                                kernel_vals[W * d + k] = kernel(
-                                    (s[d]
-                                     - static_cast<real_type>(idx[d] + k + (d == 2) * z_offset))
-                                    * inv_hw);
-                            });
+                            kernel_vals[W * d + k] =
+                                kernel((s[d] - static_cast<real_type>(idx[d] + k)) * inv_hw);
+                        });
 
                         Kokkos::parallel_for(
-                            Kokkos::TeamThreadMDRange(team, W, W, z_count),
-                            [&](int wx, int wy, int wz) {
+                            Kokkos::TeamThreadMDRange(team, W, W, W), [&](int wx, int wy, int wz) {
                                 const real_type kernel_val =
                                     kernel_vals[wx] * kernel_vals[W + wy] * kernel_vals[2 * W + wz];
 
                                 const int point_tile_x = idx[0] + half_left - tile_x0;
                                 const int point_tile_y = idx[1] + half_left - tile_y0;
                                 const int point_tile_z = idx[2] + half_left - tile_z0;
-
-                                assert(point_tile_x >= 0 && point_tile_x < tile_size_x);
-                                assert(point_tile_y >= 0 && point_tile_y < tile_size_y);
-                                assert(point_tile_z >= 0 && point_tile_z < tile_size_z);
 
                                 const int hist_idx =
                                     (((point_tile_z + wz) * hy + (point_tile_y + wy)) * hx
@@ -213,15 +195,10 @@ namespace ippl {
                             int hist_y = (hist_idx / hx) % hy;
                             int hist_z = hist_idx / (hx * hy);
 
-                            // Compute GLOBAL grid indices
-                            int global_x = tile_x0 + hist_x - half_left;
-                            int global_y = tile_y0 + hist_y - half_left;
-                            int global_z = tile_z0 + hist_z - half_left + z_offset;
-
-                            // Convert to LOCAL indices
-                            int local_x = global_x - local_offset[0];
-                            int local_y = global_y - local_offset[1];
-                            int local_z = global_z - local_offset[2];
+                            // Compute LOCAL grid indices (tiles are already in local coordinates)
+                            int local_x = tile_x0 + hist_x - half_left;
+                            int local_y = tile_y0 + hist_y - half_left;
+                            int local_z = tile_z0 + hist_z - half_left;
 
                             // Check if within LOCAL domain (including ghosts)
                             if (local_x < -nghost
@@ -290,8 +267,7 @@ namespace ippl {
                                         values,       grid,         n_grid,
                                         n_grid_local, local_offset, num_tiles,
                                         tile_size_x,  tile_size_y,  tile_size_z,
-                                        z_tiles,      nghost,       inv_hw,
-                                        kernel};
+                                        nghost,       inv_hw,       kernel};
 
                             // Calculate scratch memory size
                             const size_t hist_size = functor.hist_size_x() * functor.hist_size_y()
@@ -300,13 +276,14 @@ namespace ippl {
                                 std::remove_reference_t<decltype(grid(0, 0, 0))>;
                             constexpr bool is_complex =
                                 std::is_same_v<grid_element_type, Kokkos::complex<RealType>>;
-                            const size_t scratch_size  = is_complex ? (2 * hist_size + (2 * W + z_tiles)) : (hist_size + (2 * W + z_tiles));
+                            const size_t scratch_size =
+                                is_complex ? (2 * hist_size + (3 * W)) : (hist_size + (3 * W));
                             const size_t scratch_bytes = scratch_size * sizeof(RealType);
 
                             // Launch team policy
                             const size_type n_tiles_total =
                                 num_tiles[0] * num_tiles[1] * num_tiles[2];
-                            const int threads_per_tile = (z_tiles + W - 1) / z_tiles;
+                            const int threads_per_tile = 1;
                             const size_type n_teams    = n_tiles_total * threads_per_tile;
 
                             using team_policy = Kokkos::TeamPolicy<ExecSpace>;
