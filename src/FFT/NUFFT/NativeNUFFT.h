@@ -168,7 +168,12 @@ namespace ippl {
 
                 // Initialize heFFTe FFT
                 ParameterList fftParams;
-                fftParams.add("use_heffte_defaults", true);
+                //fftParams.add("use_heffte_defaults", true);
+            	fftParams.add("use_heffte_defaults", false);
+            	fftParams.add("use_pencils", true);
+            	fftParams.add("use_reorder", false);
+            	fftParams.add("use_gpu_aware", true);
+            	fftParams.add("comm", ippl::p2p_pl);
                 heffte_fft_ =
                     std::make_unique<FFT<CCTransform, ComplexField>>(*grid_layout_, fftParams);
 
