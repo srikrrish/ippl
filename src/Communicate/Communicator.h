@@ -15,6 +15,7 @@
 
 ////////////////////////////////////////////////
 // For message size check; see below
+
 #include <climits>
 #include <cstdlib>
 
@@ -27,7 +28,6 @@
 
 namespace ippl {
     namespace mpi {
-
         class Communicator : public TagMaker {
         public:
             Communicator();
@@ -201,7 +201,10 @@ namespace ippl {
             std::vector<LogEntry> gatherLogsFromAllRanks(const std::vector<LogEntry>& localLogs);
             void writeLogsToFile(const std::vector<LogEntry>& allLogs, const std::string& filename);
 
-            buffer_handler_type buffer_handlers_m;
+            static buffer_handler_type& getBufferHandler() {
+                static buffer_handler_type handler;
+                return handler;
+            }
 
             double defaultOveralloc_m = 1.0;
 
@@ -213,6 +216,8 @@ namespace ippl {
             int rank_m;
         };
     }  // namespace mpi
+
+
 }  // namespace ippl
 
 #include "Communicate/Collectives.hpp"

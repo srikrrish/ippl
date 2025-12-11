@@ -79,7 +79,6 @@ template <unsigned Dim>
 ippl::Vector<int, Dim> globalToLocal(const ippl::NDIndex<Dim>& lDom,
                                      const ippl::Vector<int, Dim>& globalIdx, int nghost) {
     ippl::Vector<int, Dim> localIdx;
-    std::cout << "nghost=" << nghost << std::endl;
     for (unsigned d = 0; d < Dim; ++d) {
         localIdx[d] = globalIdx[d] - lDom[d].first() + nghost;
     }
@@ -94,7 +93,7 @@ ippl::Vector<int, Dim> centeredToCornerDC(const ippl::Vector<int, Dim>& kVec,
         if (kVec[d] >= 0) {
             cornerIdx[d] = kVec[d];
         } else {
-            cornerIdx[d] = 2 * n_modes[d] + kVec[d];
+            cornerIdx[d] = n_modes[d] + kVec[d];
         }
     }
     return cornerIdx;
@@ -115,9 +114,8 @@ int main(int argc, char* argv[]) {
         int myRank = ippl::Comm->rank();
         int nRanks = ippl::Comm->size();
 
-        // Number of modes (output size before upsampling)
-        ippl::Vector<int, dim> n_modes = {64, 64, 64};
-        // ippl::Vector<int, dim> n_modes = {8, 8, 8};
+        // Number of modes (output size - no upsampling)
+        ippl::Vector<int, dim> n_modes = {16, 16, 16};
 
         ippl::Index I(n_modes[0]);
         ippl::Index J(n_modes[1]);
@@ -130,10 +128,8 @@ int main(int argc, char* argv[]) {
         ippl::FieldLayout<dim> layout(MPI_COMM_WORLD, owned, isParallel);
 
         typedef ippl::Vector<double, 3> Vector_t;
-        Vector_t minU = {0, 0, 0}; //{-pi, -pi, -pi};
-        Vector_t maxU = {4 * pi, 4 * pi, 4 * pi};
-        // Vector_t minU = {0.0, 0.0, 0.0};
-        // Vector_t maxU = {25.0, 25.0, 25.0};
+        Vector_t minU = {0, 0, 0};
+        Vector_t maxU = {2 * pi, 2 * pi, 2 * pi};
 
         std::array<double, dim> dx = {
             (maxU[0] - minU[0]) / double(n_modes[0]),
@@ -152,7 +148,7 @@ int main(int argc, char* argv[]) {
 
         using size_type = ippl::detail::size_type;
 
-        size_type Np = std::pow(64, 3)*10;
+        size_type Np = std::pow(16, 3);
 
         typedef ippl::Field<Kokkos::complex<double>, dim, Mesh_t, Centering_t>::uniform_type
             field_type;
@@ -174,20 +170,24 @@ int main(int argc, char* argv[]) {
         fftParams.add("use_finufft_defaults", false);
         fftParams.add("use_kokkos_nufft", false);
 
-        fftParams.add("spread_method", "output_focused");
+        fftParams.add("spread_method", "tiled");
         fftParams.add("tile_size_3d", 6);
         fftParams.add("z_tiles", 1);
-        // fftParams.add("team_size", 4);
         fftParams.add("sort", true);
-        fftParams.add("use_upsampled_inputs", true);
+
+        // Key difference: use_upsampled_inputs = false
+        fftParams.add("use_upsampled_inputs", false);
 
         typedef ippl::FFT<ippl::NUFFTransform, real_field_type> FFT_type;
 
+        double tolerance = fftParams.get<double>("tolerance");
+
         if (myRank == 0) {
-            std::cout << "Width "
-                      << static_cast<int>(
-                             std::ceil(std::log10((1.0) / fftParams.get<double>("tolerance"))))
-                             + 1
+            std::cout << "Testing with use_upsampled_inputs = false" << std::endl;
+            std::cout << "Grid size: " << n_modes[0] << " x " << n_modes[1] << " x "
+                      << n_modes[2] << std::endl;
+            std::cout << "Kernel width: "
+                      << static_cast<int>(std::ceil(std::log10(1.0 / tolerance))) + 1
                       << std::endl;
         }
 
@@ -196,44 +196,12 @@ int main(int argc, char* argv[]) {
 
         bunch.create(nloc);
 
-        // Create FFT object first to get upsampled grid size
+        // Create FFT object
         std::unique_ptr<FFT_type> fft = std::make_unique<FFT_type>(layout, nloc, type, fftParams);
 
-        // Get the upsampled grid size from the NUFFT
-        double sigma     = 2.0;  // Default upsampling factor
-        double tolerance = fftParams.get<double>("tolerance");
-        int kernel_width = static_cast<int>(std::ceil(std::log10(1.0 / tolerance))) + 1;
-
-        ippl::Vector<int, dim> n_grid;
-        for (unsigned d = 0; d < dim; ++d) {
-            size_t upsampled = std::max<size_t>(sigma * n_modes[d], 2 * kernel_width);
-            // Round up to next power of 2
-            n_grid[d] = (upsampled);
-        }
-
-        if (myRank == 0) {
-            std::cout << "Upsampled grid size: " << n_grid[0] << " x " << n_grid[1] << " x "
-                      << n_grid[2] << std::endl;
-        }
-
-        // Create upsampled grid layout and mesh
-        ippl::Index I_up(n_grid[0]);
-        ippl::Index J_up(n_grid[1]);
-        ippl::Index K_up(n_grid[2]);
-        ippl::NDIndex<dim> owned_upsampled(I_up, J_up, K_up);
-
-        ippl::FieldLayout<dim> layout_upsampled(MPI_COMM_WORLD, owned_upsampled, isParallel);
-
-        Vector_t hx_up, origin_up;
-        for (unsigned d = 0; d < dim; ++d) {
-            origin_up[d] = 0;
-            hx_up[d]     = (maxU[d] - minU[d]) / n_grid[d];
-        }
-        ippl::UniformCartesian<double, 3> mesh_upsampled(owned_upsampled, hx_up, origin_up);
-
-        // Create output field on upsampled grid
+        // Create output field on the original (non-upsampled) grid
         const int nghost = 1;
-        field_type field_upsampled(mesh_upsampled, layout_upsampled, nghost);
+        field_type field_output(mesh, layout, nghost);
 
         Kokkos::Random_XorShift64_Pool<> rand_pool64((size_type)(42 + myRank));
         Kokkos::parallel_for(nloc,
@@ -241,21 +209,20 @@ int main(int argc, char* argv[]) {
                                  bunch.R.getView(), bunch.Q.getView(), rand_pool64, minU, maxU));
 
         bunch.update();
-        field_upsampled = Kokkos::complex(0.0);
-        // field_upsampled.fillHalo();
+        field_output = Kokkos::complex(0.0);
 
-        fft->transform(bunch.R, bunch.Q, field_upsampled);
+        fft->transform(bunch.R, bunch.Q, field_output);
 
-        // Get local domain info for upsampled grid
-        const auto& lDom_up    = layout_upsampled.getLocalNDIndex();
-        const int nghost_field = field_upsampled.getNghost();
+        // Get local domain info
+        const auto& lDom           = layout.getLocalNDIndex();
+        const int nghost_field     = field_output.getNghost();
 
         ippl::Vector<int, 3> kVec;
         kVec[0] = (int)(0.37 * n_modes[0]);  // Positive frequency
         kVec[1] = (int)(0.16 * n_modes[1]);
         kVec[2] = (int)(0.23 * n_modes[2]);
 
-        // Convert frequency indices to corner-DC format
+        // Convert frequency indices to corner-DC format (for non-upsampled grid)
         ippl::Vector<int, 3> globalIdx = centeredToCornerDC<dim>(kVec, n_modes);
 
         if (myRank == 0) {
@@ -266,16 +233,16 @@ int main(int argc, char* argv[]) {
         }
 
         // Check if this rank owns the mode we want to check
-        bool iOwnMode = isOwnedLocally<dim>(lDom_up, globalIdx);
+        bool iOwnMode = isOwnedLocally<dim>(lDom, globalIdx);
 
         // Extract the NUFFT result from the rank that owns it
         Kokkos::complex<double> nufft_result(0.0, 0.0);
 
         if (iOwnMode) {
-            auto field_host = field_upsampled.getHostMirror();
-            Kokkos::deep_copy(field_host, field_upsampled.getView());
+            auto field_host = field_output.getHostMirror();
+            Kokkos::deep_copy(field_host, field_output.getView());
 
-            auto localIdx = globalToLocal<dim>(lDom_up, globalIdx, nghost_field);
+            auto localIdx = globalToLocal<dim>(lDom, globalIdx, nghost_field);
             nufft_result  = field_host(localIdx[0], localIdx[1], localIdx[2]);
 
             std::cout << "Rank " << myRank << " owns mode, local index = (" << localIdx[0] << ", "
@@ -292,12 +259,11 @@ int main(int argc, char* argv[]) {
         nufft_result_global = Kokkos::complex<double>(recv_buf[0], recv_buf[1]);
 
         if (myRank == 0) {
-            std::cout << "Nufft result " << nufft_result_global << std::endl;
+            std::cout << "NUFFT result " << nufft_result_global << std::endl;
         }
 
         // Compute DFT reference on all particles
         // DFT: f_k = sum_j c_j * exp(-i * k * x_j)
-        // where k is the frequency vector: k[d] = 2*pi/L * kVec[d]
         Kokkos::complex<double> dft_local(0.0, 0.0);
         Kokkos::complex<double> imag = {0.0, 1.0};
 
@@ -308,7 +274,6 @@ int main(int argc, char* argv[]) {
         size_type nloc_actual = bunch.getLocalNum();
 
         // The frequency in physical units
-        // For domain [0, 2*pi), the frequencies are just kVec[d]
         Kokkos::parallel_reduce(
             "NUDFT type1 local", nloc_actual,
             KOKKOS_LAMBDA(const size_t idx, Kokkos::complex<double>& valL) {
@@ -337,6 +302,7 @@ int main(int argc, char* argv[]) {
             double rel_error_imag = std::fabs(dft_global.imag() - nufft_result_global.imag())
                                     / std::fabs(dft_global.imag());
 
+            std::cout << "\n=== Results (use_upsampled_inputs = false) ===" << std::endl;
             std::cout << "DFT reference: " << std::setprecision(16) << dft_global.real() << " + "
                       << dft_global.imag() << "i" << std::endl;
             std::cout << "NUFFT result:  " << std::setprecision(16) << nufft_result_global.real()
@@ -352,12 +318,6 @@ int main(int argc, char* argv[]) {
             bool passed = (rel_error_real < tolerance * 100) && (rel_error_imag < tolerance * 100);
             std::cout << "Test " << (passed ? "PASSED" : "FAILED") << std::endl;
         }
-
-        // Optional: Debug output - check multiple modes
-        if (myRank == 0 && false) {  // Set to true for debugging
-            std::cout << "\nChecking additional modes:" << std::endl;
-        }
-
         ippl::Comm->barrier();
     }
     ippl::finalize();

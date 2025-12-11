@@ -191,7 +191,8 @@ int main(int argc, char* argv[]) {
         typedef ippl::FFT<ippl::NUFFTransform, real_field_type> FFT_type;
 
         // Test configurations: grid size and particles per grid point
-        std::vector<int> grid_sizes = {32, 64};
+        std::vector<int> grid_sizes = {256, 512};
+        // std::vector<int> grid_sizes = {64, 128};
         std::vector<int> particles_per_point = {1, 10};
 
         for (int grid_size : grid_sizes) {
@@ -248,7 +249,7 @@ int main(int argc, char* argv[]) {
                     // OutputFocused method
                     {
                         ippl::ParameterList fftParams;
-                        fftParams.add("tolerance", 1e-10);
+                        fftParams.add("tolerance", 1e-4);
 #ifdef ENABLE_GPU_NUFFT
                         fftParams.add("gpu_method", 1);
                         fftParams.add("gpu_sort", 0);
@@ -274,7 +275,7 @@ int main(int argc, char* argv[]) {
                     // Tiled method
                     {
                         ippl::ParameterList fftParams;
-                        fftParams.add("tolerance", 1e-10);
+                        fftParams.add("tolerance", 1e-4);
 #ifdef ENABLE_GPU_NUFFT
                         fftParams.add("gpu_method", 1);
                         fftParams.add("gpu_sort", 0);
@@ -300,7 +301,7 @@ int main(int argc, char* argv[]) {
                     // Atomic method
                     {
                         ippl::ParameterList fftParams;
-                        fftParams.add("tolerance", 1e-10);
+                        fftParams.add("tolerance", 1e-4);
 #ifdef ENABLE_GPU_NUFFT
                         fftParams.add("gpu_method", 1);
                         fftParams.add("gpu_sort", 0);
@@ -323,7 +324,7 @@ int main(int argc, char* argv[]) {
                     // kokkos_nufft reference
                     {
                         ippl::ParameterList fftParams;
-                        fftParams.add("tolerance", 1e-10);
+                        fftParams.add("tolerance", 1e-4);
                         fftParams.add("use_finufft_defaults", false);
                         fftParams.add("use_kokkos_nufft", true);
 
@@ -337,8 +338,19 @@ int main(int argc, char* argv[]) {
                     // FINUFFT/cuFINUFFT reference
                     {
                         ippl::ParameterList fftParams;
-                        fftParams.add("tolerance", 1e-10);
-                        fftParams.add("use_finufft_defaults", true);
+                        fftParams.add("tolerance", 1e-4);
+                        fftParams.add("use_finufft", true);
+                        //fftParams.add("gpu_method", 3);
+                        //fftParams.add("gpu_sort", 0);
+                        //fftParams.add("gpu_kerevalmeth", 1);
+                        //fftParams.add("gpu_binsizex", 8);
+                        //fftParams.add("gpu_binsizey", 8);
+                        //fftParams.add("gpu_binsizez", 2);
+                        //fftParams.add("gpu_maxsubprobsize", 1024);
+                        //fftParams.add("spread_kerevalmeth", 1);
+                        //fftParams.add("spread_sort", 2);
+                        //fftParams.add("nthreads", 0);
+
 
                         auto fft = std::make_unique<FFT_type>(layout, nloc, 1, fftParams);
                         double time_ms = benchmarkType1(*fft, field, bunch, "FINUFFT");
@@ -383,7 +395,7 @@ int main(int argc, char* argv[]) {
                     // Tiled method
                     {
                         ippl::ParameterList fftParams;
-                        fftParams.add("tolerance", 1e-10);
+                        fftParams.add("tolerance", 1e-4);
 #ifdef ENABLE_GPU_NUFFT
                         fftParams.add("gpu_method", 1);
                         fftParams.add("gpu_sort", 0);
@@ -395,7 +407,7 @@ int main(int argc, char* argv[]) {
 #endif
                         fftParams.add("use_finufft_defaults", false);
                         fftParams.add("use_kokkos_nufft", false);
-                        fftParams.add("spread_method", "tiled");
+                        fftParams.add("gather_method", "tiled");
                         fftParams.add("sort", true);
 
                         auto fft = std::make_unique<FFT_type>(layout, nloc, 2, fftParams);
@@ -403,10 +415,12 @@ int main(int argc, char* argv[]) {
                         printResult("IPPL Tiled", time_ms, Np, grid_size, "2");
                     }
 
+
+
                     // Atomic method
                     {
                         ippl::ParameterList fftParams;
-                        fftParams.add("tolerance", 1e-10);
+                        fftParams.add("tolerance", 1e-4);
 #ifdef ENABLE_GPU_NUFFT
                         fftParams.add("gpu_method", 1);
                         fftParams.add("gpu_sort", 0);
@@ -418,18 +432,64 @@ int main(int argc, char* argv[]) {
 #endif
                         fftParams.add("use_finufft_defaults", false);
                         fftParams.add("use_kokkos_nufft", false);
-                        fftParams.add("spread_method", "atomic");
+                        fftParams.add("gather_method", "atomic");
 
                         auto fft = std::make_unique<FFT_type>(layout, nloc, 2, fftParams);
                         double time_ms = benchmarkType2(*fft, field, bunch, "Atomic");
                         printResult("IPPL Atomic", time_ms, Np, grid_size, "2");
                     }
 
+
+
+                    // Atomic method
+                    {
+                        ippl::ParameterList fftParams;
+                        fftParams.add("tolerance", 1e-4);
+#ifdef ENABLE_GPU_NUFFT
+                        fftParams.add("gpu_method", 1);
+                        fftParams.add("gpu_sort", 0);
+                        fftParams.add("gpu_kerevalmeth", 1);
+#else
+                        fftParams.add("spread_kerevalmeth", 1);
+                        fftParams.add("spread_sort", 2);
+                        fftParams.add("nthreads", 0);
+#endif
+                        fftParams.add("use_finufft_defaults", false);
+                        fftParams.add("use_kokkos_nufft", false);
+                        fftParams.add("gather_method", "atomic_sort");
+
+                        auto fft = std::make_unique<FFT_type>(layout, nloc, 2, fftParams);
+                        double time_ms = benchmarkType2(*fft, field, bunch, "Atomic Sort");
+                        printResult("IPPL Atomic Sort", time_ms, Np, grid_size, "2");
+                    }
+
+                    // Atomic method
+                    {
+                        ippl::ParameterList fftParams;
+                        fftParams.add("tolerance", 1e-4);
+#ifdef ENABLE_GPU_NUFFT
+                        fftParams.add("gpu_method", 1);
+                        fftParams.add("gpu_sort", 0);
+                        fftParams.add("gpu_kerevalmeth", 1);
+#else
+                        fftParams.add("spread_kerevalmeth", 1);
+                        fftParams.add("spread_sort", 2);
+                        fftParams.add("nthreads", 0);
+#endif
+                        fftParams.add("use_finufft_defaults", false);
+                        fftParams.add("use_kokkos_nufft", false);
+                        fftParams.add("gather_method", "native");
+
+                        auto fft = std::make_unique<FFT_type>(layout, nloc, 2, fftParams);
+                        double time_ms = benchmarkType2(*fft, field, bunch, "Atomic");
+                        printResult("IPPL Native", time_ms, Np, grid_size, "2");
+                    }
+
 #ifdef KOKKOS_NUFFT_AVAILABLE
                     // kokkos_nufft reference
                     {
                         ippl::ParameterList fftParams;
-                        fftParams.add("tolerance", 1e-10);
+                        fftParams.add("tolerance", 1e-4);
                         fftParams.add("use_finufft_defaults", false);
                         fftParams.add("use_kokkos_nufft", true);
 
@@ -443,8 +503,21 @@ int main(int argc, char* argv[]) {
                     // FINUFFT/cuFINUFFT reference
                     {
                         ippl::ParameterList fftParams;
-                        fftParams.add("tolerance", 1e-10);
-                        fftParams.add("use_finufft_defaults", true);
+                        fftParams.add("tolerance", 1e-4);
+                        fftParams.add("use_finufft", true);
+
+                        //fftParams.add("use_finufft", true);
+                        //fftParams.add("gpu_method", 3);
+                        //fftParams.add("gpu_sort", 0);
+                        //fftParams.add("gpu_kerevalmeth", 1);
+                        //fftParams.add("gpu_binsizex", 8);
+                        //fftParams.add("gpu_binsizey", 8);
+                        //fftParams.add("gpu_binsizez", 2);
+                        //fftParams.add("gpu_maxsubprobsize", 1024);
+                        //fftParams.add("spread_kerevalmeth", 1);
+                        //fftParams.add("spread_sort", 2);
+                        //fftParams.add("nthreads", 0);
+
 
                         auto fft = std::make_unique<FFT_type>(layout, nloc, 2, fftParams);
                         double time_ms = benchmarkType2(*fft, field, bunch, "FINUFFT");

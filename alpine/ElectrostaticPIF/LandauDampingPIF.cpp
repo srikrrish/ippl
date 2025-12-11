@@ -158,7 +158,6 @@ int main(int argc, char* argv[]) {
         static IpplTimings::TimerRef initializeShapeFunctionPIF =
             IpplTimings::getTimer("initializeShapeFunctionPIF");
 
-        IpplTimings::startTimer(mainTimer);
 
         const size_type totalP = std::atoll(argv[4]);
         const unsigned int nt  = std::atoi(argv[5]);
@@ -179,7 +178,7 @@ int main(int argc, char* argv[]) {
         for (unsigned i = 0; i < Dim; i++) {
 	    //For upsampling the grid
 	    nrOrig[i] = nr[i];
-	    nr[i] = 2 * nr[i]; 
+	    nr[i] = 2 * nr[i];
             domain[i] = ippl::Index(nr[i]);
             domainOrig[i] = ippl::Index(nrOrig[i]);
         }
@@ -204,6 +203,7 @@ int main(int argc, char* argv[]) {
         const bool isAllPeriodic = true;
         Mesh_t mesh(domain, hr, origin);
         Mesh_t meshOrig(domainOrig, hrOrig, origin);
+
 
         FieldLayout_t FL(*ippl::Comm, domain, isParallel, isAllPeriodic);
         FieldLayout_t FLOrig(*ippl::Comm, domainOrig, isParallel, isAllPeriodic);
@@ -338,7 +338,12 @@ int main(int argc, char* argv[]) {
 
         // begin main timestep loop
         msg << "Starting iterations ..." << endl;
-        for (unsigned int it = 0; it < nt; it++) {
+        int warmup = 3;
+        for (int it = -warmup; it < (int)nt; it++) {
+            if (it == 0) {
+                IpplTimings::resetAllTimers();
+                IpplTimings::startTimer(mainTimer);
+            }
             // LeapFrog time stepping https://en.wikipedia.org/wiki/Leapfrog_integration
             // Here, we assume a constant charge-to-mass ratio of -1 for
             // all the particles hence eliminating the need to store mass as
@@ -383,6 +388,11 @@ int main(int argc, char* argv[]) {
         IpplTimings::stopTimer(mainTimer);
         IpplTimings::print();
         IpplTimings::print(std::string("timing.dat"));
+
+        std::string res_file  = "LandauDampingPIF";
+        res_file += std::to_string(ippl::Comm->size());
+        res_file += ".csv";
+        IpplTimings::dumpToCSV(res_file);
     }
     ippl::finalize();
 

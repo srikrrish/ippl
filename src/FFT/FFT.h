@@ -17,6 +17,7 @@
 
 #include <Kokkos_Complex.hpp>
 #include <array>
+#include <condition_variable>
 #include <heffte_fft3d.h>
 #include <heffte_fft3d_r2c.h>
 #include <memory>
@@ -375,7 +376,7 @@ namespace ippl {
          * @param input Input field
          * @param output Output field
          */
-        void transform(TransformDirection direction, ComplexField& input, ComplexField& output);
+        void transform(TransformDirection direction, ComplexField& input, ComplexField& output, int dir = 1);
 
         /**
          * Performs pruned forward FFT for pruning factor 2 by a manual last Cooley-Tukey step in
@@ -383,7 +384,7 @@ namespace ippl {
          * @param input Input field
          * @param output Output field
          */
-        void forward_stride2_pruned_3d(ComplexField& input, ComplexField& output);
+        void forward_stride2_pruned_3d(int dir, ComplexField& input, ComplexField& output);
 
         /**
          * Performs pruned backward FFT for pruning factor 2 by a manual last Cooley-Tukey step in
@@ -391,7 +392,7 @@ namespace ippl {
          * @param input Input field
          * @param output Output field
          */
-        void backward_stride2_pruned_3d(ComplexField& input, ComplexField& output);
+        void backward_stride2_pruned_3d(int dir, ComplexField& input, ComplexField& output);
 
         ~FFT();
     private:
@@ -403,6 +404,10 @@ namespace ippl {
         std::array<std::shared_ptr<BaseFFTType<heffteBackend, long long>>, numSubFFTs> pruned_heffte_m;
         std::array<typename Base::template temp_view_type<ComplexField>, numSubFFTs> tempFieldInputs;
         std::array<workspace_t, numSubFFTs> workspaces_m;
+        std::array<MPI_Comm, numSubFFTs> mpicomms_m;
+
+        int numConcurrentFFTs_;
+        std::array<std::atomic<bool>, 8> fftSlotAvailable_;
 
 #ifdef KOKKOS_ENABLE_CUDA
         std::array<cudaStream_t, numSubFFTs> streams_m;
@@ -695,10 +700,10 @@ namespace ippl {
         bool use_kokkos_nufft;
         bool use_finufft;
         bool use_upsampled_inputs_m;
+        std::array<int64_t, 3> n_modes;
 
 #ifdef KOKKOS_NUFFT_AVAILABLE
         std::unique_ptr<kokkos_nufft_t> kokkos_nufft_plan;
-        std::array<int64_t, 3> n_modes;
 #endif
 
         // Native NUFFT implementation (opaque pointer, actual type defined in FFT.hpp)
