@@ -114,6 +114,7 @@ public:
     double rhoNorm_m;
 
     std::string shapetype_m;
+    std::string parallel_strategy_m;
 
     int shapedegree_m;
     //std::shared_ptr<FFT_t> fft_mp;

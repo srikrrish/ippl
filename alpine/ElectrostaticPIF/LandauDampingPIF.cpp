@@ -178,13 +178,24 @@ int main(int argc, char* argv[]) {
         for (unsigned i = 0; i < Dim; i++) {
 	    //For upsampling the grid
 	    nrOrig[i] = nr[i];
-	    nr[i] = 2 * nr[i];
+	    //parallel_strategy_m = "dd" referes to domain decomposition where both fields and particles are 
+	    //split between ranks whereas parallel_strategy_m = "pd" referes to particle decomposition where
+	    //only particles are split between ranks
+	    if(parallel_strategy_m == "dd") {
+	    	nr[i] = 2 * nr[i];
+	    }
             domain[i] = ippl::Index(nr[i]);
             domainOrig[i] = ippl::Index(nrOrig[i]);
         }
 
         std::array<bool, Dim> isParallel;  // Specifies SERIAL, PARALLEL dims
-        isParallel.fill(true);
+	if(parallel_strategy_m == "dd") {
+       		isParallel.fill(true);
+	}
+	else if(parallel_strategy_m == "pd") {
+       		isParallel.fill(false);
+	}
+
 
         // create mesh and layout objects for this problem domain
         Vector_t kw  = {0.5, 0.5, 0.5};
@@ -204,9 +215,15 @@ int main(int argc, char* argv[]) {
         Mesh_t mesh(domain, hr, origin);
         Mesh_t meshOrig(domainOrig, hrOrig, origin);
 
-
-        FieldLayout_t FL(*ippl::Comm, domain, isParallel, isAllPeriodic);
-        FieldLayout_t FLOrig(*ippl::Comm, domainOrig, isParallel, isAllPeriodic);
+	std::unique_ptr<ippl::mpi::Communicator> comm_landau = 0;
+	if(parallel_strategy_m == "dd") {
+        	comm_landau = std::make_unique<ippl::mpi::Communicator>(*ippl::Comm);
+	}
+	else if(parallel_strategy_m == "dd") {
+        	comm_landau = std::make_unique<ippl::mpi::Communicator>(MPI_COMM_SELF);
+	}
+        FieldLayout_t FL(*comm_landau, domain, isParallel, isAllPeriodic);
+        FieldLayout_t FLOrig(*comm_landau, domainOrig, isParallel, isAllPeriodic);
 
         PLayout_t PL(FLOrig, meshOrig);
 
@@ -359,12 +376,13 @@ int main(int argc, char* argv[]) {
             P->R = P->R + dt * P->P;
             IpplTimings::stopTimer(RTimer);
 
-            // Apply particle BC
-            //IpplTimings::startTimer(BCTimer);
-            //PL.applyBC(P->R, PL.getRegionLayout().getDomain());
-            //IpplTimings::stopTimer(BCTimer);
-
-	    P->update();
+            // Apply particle BC or do update depending on parallel strategy
+	    if(parallel_strategy_m == "pd") {
+            	PL.applyBC(P->R, PL.getRegionLayout().getDomain());
+	    }
+	    else if(parallel_strategy_m == "dd") {
+	    	P->update();
+	    }
             // scatter the charge onto the underlying grid
             P->scatter();
 
@@ -389,10 +407,10 @@ int main(int argc, char* argv[]) {
         IpplTimings::print();
         IpplTimings::print(std::string("timing.dat"));
 
-        std::string res_file  = "LandauDampingPIF";
-        res_file += std::to_string(ippl::Comm->size());
-        res_file += ".csv";
-        IpplTimings::dumpToCSV(res_file);
+        //std::string res_file  = "LandauDampingPIF";
+        //res_file += std::to_string(ippl::Comm->size());
+        //res_file += ".csv";
+        //IpplTimings::dumpToCSV(res_file);
     }
     ippl::finalize();
 
