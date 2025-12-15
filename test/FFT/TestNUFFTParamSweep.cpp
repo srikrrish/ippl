@@ -81,7 +81,8 @@ int main(int argc, char* argv[]) {
 
         const double pi = std::acos(-1.0);
 
-        std::array<size_t, Dim> pt = {32, 32, 32};
+        //std::array<size_t, Dim> pt = {32, 32, 32};
+        std::array<size_t, Dim> pt = {256, 256, 256};
 
         ippl::Index I(pt[0]);
         ippl::Index J(pt[1]);
@@ -132,9 +133,9 @@ int main(int argc, char* argv[]) {
         msg << "Testing with 32^3 grid and 32^3 particles" << endl;
 
         // Parameter sweep configurations
-        std::vector<int> tile_sizes = {1,2,3,4,5,6};
-        std::vector<int> team_sizes = {32, 64, 128, 256};
-        std::vector<int> z_tiles    = {1, 2, 4, 8};
+        std::vector<int> tile_sizes = {1};
+        std::vector<int> team_sizes = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024};
+        std::vector<int> z_tiles    = {1};
 
         // Output file for results
         std::ofstream outfile("nufft_param_sweep.csv");
@@ -152,10 +153,11 @@ int main(int argc, char* argv[]) {
 
                     // Create FFT with tiled scatter configuration
                     ippl::ParameterList fftParams;
-                    fftParams.add("tolerance", 1e-10);
+                    fftParams.add("tolerance", 1e-6);
                     fftParams.add("use_finufft_defaults", false);
                     fftParams.add("use_kokkos_nufft", false);
                     fftParams.add("spread_method", "output_focused");
+                    fftParams.add("gather_method", "tiled");
                     fftParams.add("tile_size_3d", tile_size);
                     fftParams.add("z_tiles", z_tile);
                     fftParams.add("team_size", team_size);
@@ -165,7 +167,7 @@ int main(int argc, char* argv[]) {
                         real_field_type;
                     typedef ippl::FFT<ippl::NUFFTransform, real_field_type> FFT_type;
 
-                    auto nufft = std::make_unique<FFT_type>(layout, Np, 1, fftParams);
+                    auto nufft = std::make_unique<FFT_type>(layout, Np, 2, fftParams);
 
                     double avg_time_ms;
                     double throughput;

@@ -47,9 +47,9 @@ namespace ippl {
                                                        Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
 
                 // Input
-                PositionViewType x;  // particle positions in physical coordinates [-pi, pi]
-                PermuteViewType permute;
-                FieldViewType field_view;  // grid with ghosts (LOCAL view)
+                std::decay_t<PositionViewType> x;  // particle positions in physical coordinates [-pi, pi]
+                std::decay_t<PermuteViewType> permute;
+                std::decay_t<FieldViewType> field_view;  // grid with ghosts (LOCAL view)
 
                 // Output
                 Kokkos::View<ValueType*, memory_space> output;
@@ -59,9 +59,9 @@ namespace ippl {
                 int nghost;
                 Vector<int, 3> n_grid_global;  // GLOBAL grid dimensions
                 Vector<int, 3> n_grid_local;   // LOCAL grid dimensions
-                Vector<int, 3> local_offset;         // first global index of local domain
-                real_type inv_hw;                           // 1 / half-width
-                KernelType kernel;
+                Vector<int, 3> local_offset;   // first global index of local domain
+                real_type inv_hw;              // 1 / half-width
+                std::decay_t<KernelType> kernel;
                 bool add_to_attribute;
 
                 // Compile-time constants
@@ -84,10 +84,12 @@ namespace ippl {
 
                 KOKKOS_INLINE_FUNCTION void operator()(const team_member& team) const {
                     const size_type particle_team = team.league_rank();
-                    if (particle_team >= n_points)
+                    if (particle_team >= n_points) {
                         return;
+                    }
 
                     const size_type particle_idx = permute(particle_team);
+                    assert(particle_idx >= 0 && particle_idx < n_points);
 
                     using grid_element_type =
                         std::remove_reference_t<decltype(field_view(0, 0, 0))>;
@@ -205,8 +207,7 @@ namespace ippl {
                     int w, size_t n_points, PositionViewType x, PermuteViewType permute,
                     FieldViewType field_view,
                     Kokkos::View<ValueType*, typename ExecSpace::memory_space> output, int nghost,
-                    Vector<int, 3> n_grid_global,
-                    Vector<int, 3> n_grid_local,
+                    Vector<int, 3> n_grid_global, Vector<int, 3> n_grid_local,
                     Vector<int, 3> local_offset, RealType inv_hw, const KernelType& kernel,
                     bool add_to_attribute, int team_size = get_default_team_size()) {
                     if constexpr (W <= MaxW) {
@@ -229,7 +230,11 @@ namespace ippl {
                             const size_t scratch_bytes = scratch_size * sizeof(RealType);
                             policy = policy.set_scratch_size(0, Kokkos::PerTeam(scratch_bytes));
 
+                            // (paul) Remove the fences here with caution. HIP gives invalid memory
+                            //         access errors with the current rocm (old) 6.0.2
+                            Kokkos::fence();
                             Kokkos::parallel_for("tiled_gather_3d", policy, functor);
+                            Kokkos::fence();
                         } else {
                             TiledGatherDispatcher<W + 1, MaxW>::template dispatch_3d<
                                 RealType, ExecSpace, KernelType, ValueType, FieldViewType,

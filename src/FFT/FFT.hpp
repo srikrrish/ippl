@@ -364,13 +364,9 @@ namespace ippl {
             // because then the code does not run on CPU due to two nester parallel_fors on the
             // same execution space. Either I need to do some pragmas below in the device
             // parallel_for or a raw omp parallel for here. Launch all sub-FFTs in this batch on
-            // separate streams 
-Kokkos::parallel_for(
-                 "PrunedFFT parallel sub-FFTs batch",
-                 Kokkos::RangePolicy<Kokkos::DefaultHostExecutionSpace>(0, batchSize),
-                 [&](const int localIdx) {
-//#pragma omp parallel for
-//            for (int localIdx = 0; localIdx < batchSize; ++localIdx) {
+            // separate streams
+#pragma omp parallel for
+            for (int localIdx = 0; localIdx < batchSize; ++localIdx) {
                 const int k    = batchStart + localIdx;  // Which sub-FFT (0-7)
                 const int slot = localIdx;               // Which slot to use (0 to batchSize-1)
 
@@ -404,7 +400,7 @@ Kokkos::parallel_for(
                                                     tempFieldInputs[slot].data(),
                                                     workspaces_m[slot].data(), heffte::scale::none);
                 }
-            });
+            }
 
             // Wait for all streams in this batch to complete before accumulation
             Kokkos::fence();
@@ -533,12 +529,8 @@ Kokkos::parallel_for(
             // Phase 1: Apply twiddle factors and run sub-IFFTs for this batch
             IpplTimings::startTimer(SubIFFTs);
 
-            Kokkos::parallel_for(
-                "PrunedIFFT parallel sub-IFFTs batch",
-                 Kokkos::RangePolicy<Kokkos::DefaultHostExecutionSpace>(0, batchSize),
-                 [&](const int localIdx) {
-//#pragma omp parallel for
-            //for (int localIdx = 0; localIdx < batchSize; ++localIdx) {
+#pragma omp parallel for
+            for (int localIdx = 0; localIdx < batchSize; ++localIdx) {
                 const int k    = batchStart + localIdx;
                 const int slot = localIdx;
 
@@ -588,7 +580,7 @@ Kokkos::parallel_for(
                 pruned_heffte_m[slot]->backward(tempFieldInputs[slot].data(),
                                                 tempFieldInputs[slot].data(),
                                                 workspaces_m[slot].data(), heffte::scale::none);
-            });
+            }
 
             // Wait for all streams in this batch
             Kokkos::fence();
@@ -1342,7 +1334,6 @@ Kokkos::parallel_for(
         tol_m = params.get<T>("tolerance", 1e-6);
 
         if (use_kokkos_nufft) {
-#ifdef KOKKOS_NUFFT_AVAILABLE
             this->n_modes = nmodes;
 
             // Setup kokkos_nufft
@@ -1350,7 +1341,7 @@ Kokkos::parallel_for(
             for (int d = 0; d < Dim; ++d) {
                 n_modes[d] = nmodes[d];
             }
-
+#ifdef KOKKOS_NUFFT_AVAILABLE
             typename kokkos_nufft_t::Config cfg{tol_m};
             kokkos_nufft_plan = std::make_unique<kokkos_nufft_t>(n_modes, cfg);
 #else
@@ -1395,9 +1386,9 @@ Kokkos::parallel_for(
             int iflag;
 
             if (type_m == 1) {
-                iflag = -1;
-            } else if (type_m == 2) {
                 iflag = 1;
+            } else if (type_m == 2) {
+                iflag = -1;
             } else {
                 throw std::logic_error("Only type 1 and type 2 NUFFT are allowed now");
             }
@@ -1447,6 +1438,7 @@ Kokkos::parallel_for(
             }
             if (params.contains("team_size")) {
                 cfg.scatter_config.team_size = params.get<int>("team_size");
+                cfg.gather_config.team_size =  params.get<int>("team_size");
             }
 
             std::string gather_method = params.get<std::string>("gather_method", "none");
@@ -1784,7 +1776,7 @@ Kokkos::parallel_for(
     FFT<NUFFTransform, RealField>::~FFT() {
 #ifdef ENABLE_FINUFFT
         if (use_finufft) {
-            ier_m = nufft_m.destroy(plan_m);
+            // ier_m = nufft_m.destroy(plan_m);
         }
 #endif
         // Clean up native NUFFT (when not using kokkos_nufft or finufft)

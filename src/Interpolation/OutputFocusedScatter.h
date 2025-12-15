@@ -26,14 +26,14 @@ namespace ippl {
              * View<Vector<T,3>*>)
              */
             template <int W, typename RealType, typename ExecSpace, typename KernelType,
-                      typename ValueType, typename GridViewType,
+                      typename ValueType, typename GridViewType, typename BinOffsetsType, typename PermuteType,
                       typename PositionViewType =
                           Kokkos::View<RealType* [3], typename ExecSpace::memory_space>>
             struct OutputFocusedScatterFunctor3D {
                 using real_type        = RealType;
                 using value_type       = ValueType;
                 using memory_space     = typename ExecSpace::memory_space;
-                using size_type        = typename memory_space::size_type;
+                using size_type        = int;
                 using team_policy      = Kokkos::TeamPolicy<ExecSpace>;
                 using team_member      = typename team_policy::member_type;
                 using scratch_space    = typename ExecSpace::scratch_memory_space;
@@ -41,21 +41,21 @@ namespace ippl {
                                                       Kokkos::MemoryTraits<Kokkos::Unmanaged>>;
 
                 // Input data
-                Kokkos::View<size_type*, memory_space> bin_offsets;
-                Kokkos::View<size_type*, memory_space> permute;
-                PositionViewType x;  // Particle positions in coordinates [-pi, pi]
+                std::decay_t<BinOffsetsType> bin_offsets;
+                std::decay_t<PermuteType> permute;
+                std::decay_t<PositionViewType> x;  // Particle positions in coordinates [-pi, pi]
                 Kokkos::View<value_type*, memory_space> values;  // Values to scatter
-                GridViewType grid;                               // Output grid
+                std::decay_t<GridViewType> grid;                               // Output grid
 
                 // Parameters
-                Kokkos::Array<size_type, 3> n_grid;        // GLOBAL grid dimensions
-                Kokkos::Array<size_type, 3> n_grid_local;  // LOCAL grid dimensions
+                Kokkos::Array<int, 3> n_grid;        // GLOBAL grid dimensions
+                Kokkos::Array<int, 3> n_grid_local;  // LOCAL grid dimensions
                 Kokkos::Array<int, 3> local_offset;        // First global index of local domain
-                Kokkos::Array<size_type, 3> num_tiles;
+                Kokkos::Array<int, 3> num_tiles;
                 int tile_size_x, tile_size_y, tile_size_z;
                 int nghost;        // ghost cell offset for field
                 real_type inv_hw;  // 1 / half_width for kernel scaling
-                KernelType kernel;
+                std::decay_t<KernelType> kernel;
 
                 // Compile-time constants
                 static constexpr int w         = W;
@@ -162,6 +162,8 @@ namespace ippl {
                                 kernel((s[d] - static_cast<real_type>(idx[d] + k)) * inv_hw);
                         });
 
+                        team.team_barrier();
+
                         Kokkos::parallel_for(
                             Kokkos::TeamThreadMDRange(team, W, W, W), [&](int wx, int wy, int wz) {
                                 const real_type kernel_val =
@@ -170,6 +172,10 @@ namespace ippl {
                                 const int point_tile_x = idx[0] + half_left - tile_x0;
                                 const int point_tile_y = idx[1] + half_left - tile_y0;
                                 const int point_tile_z = idx[2] + half_left - tile_z0;
+
+                                assert(point_tile_x >= 0);
+                                assert(point_tile_y >= 0);
+                                assert(point_tile_z >= 0);
 
                                 const int hist_idx =
                                     (((point_tile_z + wz) * hy + (point_tile_y + wy)) * hx
@@ -212,20 +218,18 @@ namespace ippl {
 
                             // Use local indices for grid access
                             if constexpr (grid_is_complex) {
-#ifdef KOKKOS_ENABLE_CUDA
-                                if constexpr (std::is_same_v<ExecSpace, Kokkos::Cuda>) {
+                                // if constexpr (std::is_same_v<ExecSpace, Kokkos::Cuda>) {
                                     double* addr_as_double = reinterpret_cast<double*>(&grid(
                                         local_x + nghost, local_y + nghost, local_z + nghost));
                                     Kokkos::atomic_add(&addr_as_double[0], hist_r(hist_idx));
                                     Kokkos::atomic_add(&addr_as_double[1], hist_c(hist_idx));
-                                } else
-#endif
-                                {
-                                    Kokkos::atomic_add(
-                                        &grid(local_x + nghost, local_y + nghost, local_z + nghost),
-                                        Kokkos::complex<real_type>(hist_r(hist_idx),
-                                                                   hist_c(hist_idx)));
-                                }
+                                // } else
+                                // {
+                                //     Kokkos::atomic_add(
+                                //         &grid(local_x + nghost, local_y + nghost, local_z + nghost),
+                                //         Kokkos::complex<real_type>(hist_r(hist_idx),
+                                //                                    hist_c(hist_idx)));
+                                // }
                             } else {
                                 Kokkos::atomic_add(
                                     &grid(local_x + nghost, local_y + nghost, local_z + nghost),
@@ -249,10 +253,10 @@ namespace ippl {
                     PositionViewType x,
                     Kokkos::View<ValueType*, typename ExecSpace::memory_space> values,
                     GridViewType grid,
-                    Kokkos::Array<typename ExecSpace::memory_space::size_type, 3> n_grid,
-                    Kokkos::Array<typename ExecSpace::memory_space::size_type, 3> n_grid_local,
+                    Kokkos::Array<int, 3> n_grid,
+                    Kokkos::Array<int, 3> n_grid_local,
                     Kokkos::Array<int, 3> local_offset,
-                    Kokkos::Array<typename ExecSpace::memory_space::size_type, 3> num_tiles,
+                    Kokkos::Array<int, 3> num_tiles,
                     int tile_size_x, int tile_size_y, int tile_size_z, int z_tiles, int nghost,
                     RealType inv_hw, const KernelType& kernel, int team_size) {
                     if constexpr (W <= MaxW) {
@@ -262,7 +266,7 @@ namespace ippl {
 
                             // Create functor with templated W
                             OutputFocusedScatterFunctor3D<W, RealType, ExecSpace, KernelType,
-                                                          ValueType, GridViewType, PositionViewType>
+                                                          ValueType, GridViewType, decltype(bin_offsets), decltype(permute), PositionViewType>
                                 functor{bin_offsets,  permute,      x,
                                         values,       grid,         n_grid,
                                         n_grid_local, local_offset, num_tiles,
@@ -290,7 +294,11 @@ namespace ippl {
                             team_policy policy(n_teams, team_size);
                             policy = policy.set_scratch_size(0, Kokkos::PerTeam(scratch_bytes));
 
+                            // (paul) Remove the fences here with caution. HIP gives invalid memory
+                            //         access errors with the current rocm (old) 6.0.2
+                            Kokkos::fence();
                             Kokkos::parallel_for("output_focused_spread", policy, functor);
+                            Kokkos::fence();
                         } else {
                             OutputFocusedScatterDispatcher<W + 1, MaxW>::template dispatch_3d<
                                 RealType, ExecSpace, KernelType, ValueType, GridViewType,
