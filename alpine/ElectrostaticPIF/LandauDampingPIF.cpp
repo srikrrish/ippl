@@ -162,6 +162,7 @@ int main(int argc, char* argv[]) {
         const size_type totalP = std::atoll(argv[4]);
         const unsigned int nt  = std::atoi(argv[5]);
         const double dt        = std::atof(argv[6]);
+    	const std::string parallel_strategy = argv[10];
 
         //double factor             = 1.0 / ippl::Comm->size();
         //size_type nloc            = (size_type)(factor * totalP);
@@ -178,10 +179,10 @@ int main(int argc, char* argv[]) {
         for (unsigned i = 0; i < Dim; i++) {
 	    //For upsampling the grid
 	    nrOrig[i] = nr[i];
-	    //parallel_strategy_m = "dd" referes to domain decomposition where both fields and particles are 
-	    //split between ranks whereas parallel_strategy_m = "pd" referes to particle decomposition where
+	    //parallel_strategy = "dd" referes to domain decomposition where both fields and particles are 
+	    //split between ranks whereas parallel_strategy = "pd" referes to particle decomposition where
 	    //only particles are split between ranks
-	    if(parallel_strategy_m == "dd") {
+	    if(parallel_strategy == "dd") {
 	    	nr[i] = 2 * nr[i];
 	    }
             domain[i] = ippl::Index(nr[i]);
@@ -189,10 +190,10 @@ int main(int argc, char* argv[]) {
         }
 
         std::array<bool, Dim> isParallel;  // Specifies SERIAL, PARALLEL dims
-	if(parallel_strategy_m == "dd") {
+	if(parallel_strategy == "dd") {
        		isParallel.fill(true);
 	}
-	else if(parallel_strategy_m == "pd") {
+	else if(parallel_strategy == "pd") {
        		isParallel.fill(false);
 	}
 
@@ -216,10 +217,10 @@ int main(int argc, char* argv[]) {
         Mesh_t meshOrig(domainOrig, hrOrig, origin);
 
 	std::unique_ptr<ippl::mpi::Communicator> comm_landau = 0;
-	if(parallel_strategy_m == "dd") {
+	if(parallel_strategy == "dd") {
         	comm_landau = std::make_unique<ippl::mpi::Communicator>(*ippl::Comm);
 	}
-	else if(parallel_strategy_m == "dd") {
+	else if(parallel_strategy == "dd") {
         	comm_landau = std::make_unique<ippl::mpi::Communicator>(MPI_COMM_SELF);
 	}
         FieldLayout_t FL(*comm_landau, domain, isParallel, isAllPeriodic);
@@ -339,8 +340,9 @@ int main(int argc, char* argv[]) {
         double tol = std::atof(argv[9]);
         P->initNUFFT(FLOrig, tol);
         msg << "After init NUFFT " << endl;
-
-	P->update();
+	if(parallel_strategy == "dd") {
+		P->update();
+	}
         msg << "After update " << endl;
         P->scatter();
         msg << "After scatter " << endl;
@@ -377,10 +379,10 @@ int main(int argc, char* argv[]) {
             IpplTimings::stopTimer(RTimer);
 
             // Apply particle BC or do update depending on parallel strategy
-	    if(parallel_strategy_m == "pd") {
+	    if(parallel_strategy == "pd") {
             	PL.applyBC(P->R, PL.getRegionLayout().getDomain());
 	    }
-	    else if(parallel_strategy_m == "dd") {
+	    else if(parallel_strategy == "dd") {
 	    	P->update();
 	    }
             // scatter the charge onto the underlying grid

@@ -275,7 +275,7 @@ namespace ippl {
         void domainToBounds(const NDIndex<Dim>& domain, std::array<long long, 3>& low,
                             std::array<long long, 3>& high);
         void setup(const heffte::box3d<long long>& inbox, const heffte::box3d<long long>& outbox,
-                   const ParameterList& params);
+                   const ParameterList& params, const Layout_t& layout);
 
         std::shared_ptr<FFT<heffteBackend, long long>> heffte_m;
         workspace_t workspace_m;

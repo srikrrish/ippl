@@ -114,7 +114,6 @@ public:
     double rhoNorm_m;
 
     std::string shapetype_m;
-    std::string parallel_strategy_m;
 
     int shapedegree_m;
     //std::shared_ptr<FFT_t> fft_mp;
@@ -236,7 +235,7 @@ public:
         const int nghost   = rho_m.getNghost();
         using mdrange_type = Kokkos::MDRangePolicy<Kokkos::Rank<Dim>>;
 
-        const FieldLayout_t& layout   = rho_m.getLayout();
+        FieldLayout_t& layout   = rho_m.getLayout();
         const Mesh_t& mesh            = rho_m.get_mesh();
         const Vector<double, Dim>& dx = mesh.getMeshSpacing();
         const auto& domain            = layout.getDomain();
@@ -286,8 +285,8 @@ public:
         Kokkos::fence();
 	double globalfieldEnergy = 0.0;
 	double globalEzAmp = 0.0;
-        layout.comm.reduce(fieldEnergy, globalfieldEnergy, 1, std::plus<double>());
-        layout.comm.reduce(EzAmp, globalEzAmp, 1, std::greater<double>());
+        layout.comm.reduce(fieldEnergy, globalfieldEnergy, 1, std::plus<double>(), 0);
+        layout.comm.reduce(EzAmp, globalEzAmp, 1, std::greater<double>(), 0);
         double volume = (rmax_m[0] - rmin_m[0]) * (rmax_m[1] - rmin_m[1]) * (rmax_m[2] - rmin_m[2]);
         globalfieldEnergy *= volume;
 
@@ -319,7 +318,7 @@ public:
         const int nghost   = rho_m.getNghost();
         using mdrange_type = Kokkos::MDRangePolicy<Kokkos::Rank<Dim>>;
 
-        const FieldLayout_t& layout   = rho_m.getLayout();
+        FieldLayout_t& layout   = rho_m.getLayout();
         const Mesh_t& mesh            = rho_m.get_mesh();
         const Vector<double, Dim>& dx = mesh.getMeshSpacing();
         const auto& domain            = layout.getDomain();
@@ -365,7 +364,7 @@ public:
             Kokkos::Sum<double>(temp));
 
         double globaltemp = 0.0;
-        layout.comm.reduce(temp, globaltemp, 1, std::plus<double>());
+        layout.comm.reduce(temp, globaltemp, 1, std::plus<double>(), 0);
         double volume = (rmax_m[0] - rmin_m[0]) * (rmax_m[1] - rmin_m[1]) * (rmax_m[2] - rmin_m[2]);
         potentialEnergy = 0.5 * globaltemp * volume;
 
