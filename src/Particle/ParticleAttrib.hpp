@@ -601,7 +601,8 @@ namespace ippl {
     void ParticleAttrib<T, Properties...>::scatterPIFNUFFT(
         Field<FT, Dim, M, C>& f, Field<ST, Dim, M, C>& Sk,
         const ParticleAttrib<Vector<PT, Dim>, Properties...>& pp,
-        FFT<NUFFTransform, Field<ST, Dim, M, C>>* nufft, const MPI_Comm& spaceComm) const {
+        FFT<NUFFTransform, Field<ST, Dim, M, C>>* nufft, 
+        const MPI_Comm& layoutComm, const MPI_Comm& spaceComm) const {
         static IpplTimings::TimerRef scatterPIFNUFFTTimer =
             IpplTimings::getTimer("ScatterPIFNUFFT");
         IpplTimings::startTimer(scatterPIFNUFFTTimer);
@@ -630,24 +631,24 @@ namespace ippl {
         // int nRanksSpace;
         // MPI_Comm_size(spaceComm, &nRanksSpace);
 
-        // static IpplTimings::TimerRef scatterAllReducePIFTimer =
-        //     IpplTimings::getTimer("scatterAllReducePIF");
-        // IpplTimings::startTimer(scatterAllReducePIFTimer);
-        // if (nRanksSpace > 1) {
-        //     // Cray MPI has problems reducing complex data type GPU-aware so do this trick to
-        //     // speed up
-        //     double* raw_ptr_viewLocal = reinterpret_cast<double*>(viewLocal.data());
-        //     double* raw_ptr_fview     = reinterpret_cast<double*>(fview.data());
-        //     int viewSize              = fview.extent(0) * fview.extent(1) * fview.extent(2);
-        //     // MPI_Allreduce(viewLocal.data(), fview.data(), viewSize,
-        //     //               MPI_C_DOUBLE_COMPLEX, MPI_SUM, spaceComm);
-        //     MPI_Allreduce(raw_ptr_viewLocal, raw_ptr_fview, 2 * viewSize, MPI_DOUBLE, MPI_SUM,
-        //                   spaceComm);
+         if (layoutComm == MPI_COMM_SELF) {
+            static IpplTimings::TimerRef scatterAllReducePIFTimer =
+                IpplTimings::getTimer("scatterAllReducePIF");
+            IpplTimings::startTimer(scatterAllReducePIFTimer);
+             // Cray MPI has problems reducing complex data type GPU-aware so do this trick to
+             // speed up
+             double* raw_ptr_viewLocal = reinterpret_cast<double*>(viewLocal.data());
+             double* raw_ptr_fview     = reinterpret_cast<double*>(fview.data());
+             int viewSize              = fview.extent(0) * fview.extent(1) * fview.extent(2);
+             // MPI_Allreduce(viewLocal.data(), fview.data(), viewSize,
+             //               MPI_C_DOUBLE_COMPLEX, MPI_SUM, spaceComm);
+             MPI_Allreduce(raw_ptr_viewLocal, raw_ptr_fview, 2 * viewSize, MPI_DOUBLE, MPI_SUM,
+                           spaceComm);
+            IpplTimings::stopTimer(scatterAllReducePIFTimer);
 
-        //} else {
-        Kokkos::deep_copy(fview, viewLocal);
-        //}
-        // IpplTimings::stopTimer(scatterAllReducePIFTimer);
+        } else {
+            Kokkos::deep_copy(fview, viewLocal);
+        }
 
         IpplTimings::startTimer(scatterPIFNUFFTTimer);
 
@@ -836,8 +837,9 @@ namespace ippl {
                                 Field<P2, Dim, M, C>& f, Field<P3, Dim, M, C>& Sk,
                                 const ParticleAttrib<Vector<P4, Dim>, Properties...>& pp,
                                 FFT<NUFFTransform, Field<P3, Dim, M, C>>* nufft,
+                                const MPI_Comm& layoutComm,
                                 const MPI_Comm& spaceComm = MPI_COMM_WORLD) {
-        attrib.scatterPIFNUFFT(f, Sk, pp, nufft, spaceComm);
+        attrib.scatterPIFNUFFT(f, Sk, pp, nufft, layoutComm, spaceComm);
     }
 
 #define DefineParticleReduction(fun, name, op, MPI_Op)            \

@@ -79,11 +79,19 @@ namespace ippl {
         isParallelDim_m = isParallel;
 
         nghost_m = nghost;
+        
+	    bool isAllSerial = true;
+        
+        for (unsigned d = 0; d < Dim; ++d) {
+            isAllSerial = isAllSerial && (!isParallelDim_m[d]);
+        }
 
-        if (nRanks < 2) {
+        if ((nRanks < 2) || isAllSerial) {
             Kokkos::resize(dLocalDomains_m, nRanks);
             Kokkos::resize(hLocalDomains_m, nRanks);
-            hLocalDomains_m(0) = domain;
+            for (int r = 0; r < nRanks; ++r) {
+                hLocalDomains_m(r) = domain;
+            }
             Kokkos::deep_copy(dLocalDomains_m, hLocalDomains_m);
             return;
         }

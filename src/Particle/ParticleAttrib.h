@@ -222,6 +222,7 @@ namespace ippl {
         void scatterPIFNUFFT(Field<P2, Dim, M, C>& f, Field<P3, Dim, M, C>& Sk,
                              const ParticleAttrib<Vector<P4, Dim>, Properties...>& pp,
                              FFT<NUFFTransform, Field<P3, Dim, M, C>>* nufft,
+                             const MPI_Comm& layoutComm,
                              const MPI_Comm& spaceComm) const;
 
         template <unsigned Dim, class M, class C, typename P2, typename P3, typename P4>

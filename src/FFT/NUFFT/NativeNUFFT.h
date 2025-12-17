@@ -143,7 +143,12 @@ namespace ippl {
 
                 // Create decomposition
                 std::array<bool, Dim> isParallel;
-                isParallel.fill(true);
+                if(comm == MPI_COMM_SELF) {
+                    isParallel.fill(false);
+                }
+                else {
+                    isParallel.fill(true);
+                }
 
                 const int hw = kernel_.width() / 2;
                 // TODO(paul) we need here (W+1)/2 ghost layers, because for uneven W, in case the
@@ -187,7 +192,7 @@ namespace ippl {
                     fftParams.add("use_reorder", false);
                     fftParams.add("use_gpu_aware", true);
                     fftParams.add("comm", 2);
-                    fftParams.add("num_concurrent_ffts", 4);
+                    fftParams.add("num_concurrent_ffts", 1);
                     PruningParams<Dim> pruning_params;
                     // Set pruning params to output the desired n_modes_, not n_grid_/2
                     for (int d = 0; d < Dim; ++d) {

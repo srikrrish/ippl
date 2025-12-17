@@ -159,7 +159,7 @@ public:
 
     void setupBCs() { setBCAllPeriodic(); }
 
-    void initNUFFT(FieldLayout_t& FL, double& tol) {
+    void initNUFFT(FieldLayout_t& FL, double& tol, const std::string& output_type) {
         ippl::ParameterList fftParams1, fftParams2;
 
         fftParams1.add("tolerance", tol);
@@ -195,8 +195,14 @@ public:
         fftParams2.add("use_finufft_defaults", false);
         fftParams1.add("use_kokkos_nufft", false);
         fftParams2.add("use_kokkos_nufft", false);
-        fftParams1.add("use_upsampled_inputs", true);
-        fftParams2.add("use_upsampled_inputs", true);
+	    if(output_type == "--use-upsampled") {
+            fftParams1.add("use_upsampled_inputs", true);
+            fftParams2.add("use_upsampled_inputs", true);
+	    }
+        else {
+            fftParams1.add("use_upsampled_inputs", false);
+            fftParams2.add("use_upsampled_inputs", false);
+	    }
         // fftParams.add("use_cufinufft_defaults", true);
 
         nufftType1_mp = std::make_shared<ippl::FFT<ippl::NUFFTransform, Field_t>>(
@@ -217,7 +223,7 @@ public:
     void scatter() {
         Inform m("scatter ");
         rho_m = {0.0, 0.0};
-        scatterPIFNUFFT(q, rho_m, Sk_m, this->R, nufftType1_mp.get());
+        scatterPIFNUFFT(q, rho_m, Sk_m, this->R, nufftType1_mp.get(), rho_m.getLayout().comm.getCommunicator());
         // rho_m = {0.0, 0.0};
         // scatterPIFNUDFT(q, rho_m, Sk_m, this->R);
 
@@ -505,7 +511,7 @@ public:
         ippl::Comm->barrier();
     }
 
-    void initializeShapeFunctionPIF() {
+    void initializeShapeFunctionPIF(const std::string& output_type) {
         using mdrange_type  = Kokkos::MDRangePolicy<Kokkos::Rank<3>>;
         auto Skview         = Sk_m.getView();
         auto N              = nr_m;
@@ -517,6 +523,13 @@ public:
         int order           = shapedegree_m + 1;
         const FieldLayout_t& layout = Sk_m.getLayout();
         const auto& lDom   = layout.getLocalNDIndex();
+        Vector_t dxShape;
+        if(output_type == "--use-upsampled") {
+            for (size_t d = 0; d < Dim; ++d) {
+                dxShape[d] = 2.0 * dx[d];
+            }
+        }
+
         if (shapetype_m == "Gaussian") {
             throw IpplException("initializeShapeFunctionPIF",
                                 "Gaussian shape function not implemented yet");
@@ -541,7 +554,7 @@ public:
                         bool shift            = (iVec[d] > (N[d] / 2));
                         kVec[d]               = 2 * pi / Len[d] * (iVec[d] - shift * N[d]);
                         //Actual mesh spacing is twice the upsampled one
-			double khbytwo = (kVec[d] * dx[d] / 2) * 2;
+			            double khbytwo = (kVec[d] * dxShape[d] / 2);
                         bool isNotZero = (khbytwo != 0.0);
                         double factor  = (1.0 / (khbytwo + ((!isNotZero) * 1.0)));
                         double arg =

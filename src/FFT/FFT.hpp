@@ -1739,37 +1739,24 @@ namespace ippl {
             auto Rview          = R.getView();
             auto fview          = f.getView();
 
+            Kokkos::parallel_for(
+                "Scale particles to 2pi", localNp, KOKKOS_LAMBDA(const size_t i) {
+                    for (size_t d = 0; d < Dim; ++d) {
+                        Rview(i)[d] *= (2.0 * pi / Len[d]);
+                    }
+            });
             if (type_m == 1) {
-                Kokkos::parallel_for(
-                    "Scale particles to 2pi", localNp, KOKKOS_LAMBDA(const size_t i) {
-                        for (size_t d = 0; d < Dim; ++d) {
-                            Rview(i)[d] *= (2.0 * pi / Len[d]);
-                        }
-                    });
                 nufft->type1(R, Q, f, use_upsampled_inputs_m);
-                Kokkos::parallel_for(
-                    "Roll back the scaling", localNp, KOKKOS_LAMBDA(const size_t i) {
-                        for (size_t d = 0; d < Dim; ++d) {
-                            Rview(i)[d] *= (Len[d] / (2.0 * pi));
-                        }
-                    });
             } else if (type_m == 2) {
-                Kokkos::parallel_for(
-                    "Scale particles to 2pi", localNp, KOKKOS_LAMBDA(const size_t i) {
-                        for (size_t d = 0; d < Dim; ++d) {
-                            Rview(i)[d] *= (2.0 * pi / Len[d]);
-                        }
-                    });
-                nufft->type2(
-                    f, R, Q,
+                nufft->type2(f, R, Q,
                     use_upsampled_inputs_m);  // Note: argument order is different for type2
-                Kokkos::parallel_for(
-                    "Roll back the scaling", localNp, KOKKOS_LAMBDA(const size_t i) {
-                        for (size_t d = 0; d < Dim; ++d) {
-                            Rview(i)[d] *= (Len[d] / (2.0 * pi));
-                        }
-                    });
             }
+            Kokkos::parallel_for(
+                "Roll back the scaling", localNp, KOKKOS_LAMBDA(const size_t i) {
+                    for (size_t d = 0; d < Dim; ++d) {
+                        Rview(i)[d] *= (Len[d] / (2.0 * pi));
+                    }
+            });
         }
     }
 

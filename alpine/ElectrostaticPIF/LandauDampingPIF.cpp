@@ -159,10 +159,12 @@ int main(int argc, char* argv[]) {
             IpplTimings::getTimer("initializeShapeFunctionPIF");
 
 
+        IpplTimings::startTimer(mainTimer);
         const size_type totalP = std::atoll(argv[4]);
         const unsigned int nt  = std::atoi(argv[5]);
         const double dt        = std::atof(argv[6]);
     	const std::string parallel_strategy = argv[10];
+    	const std::string output_type = argv[11];
 
         //double factor             = 1.0 / ippl::Comm->size();
         //size_type nloc            = (size_type)(factor * totalP);
@@ -170,6 +172,7 @@ int main(int argc, char* argv[]) {
 
         //MPI_Allreduce(&nloc, &Total_particles, 1, MPI_UNSIGNED_LONG, MPI_SUM, ippl::Comm->getCommunicator());
 
+        msg << "Read arguments " << endl;
         using bunch_type = ChargedParticlesPIF<PLayout_t>;
 
         std::unique_ptr<bunch_type> P;
@@ -177,25 +180,25 @@ int main(int argc, char* argv[]) {
         ippl::NDIndex<Dim> domain;
         ippl::NDIndex<Dim> domainOrig;
         for (unsigned i = 0; i < Dim; i++) {
-	    //For upsampling the grid
-	    nrOrig[i] = nr[i];
-	    //parallel_strategy = "dd" referes to domain decomposition where both fields and particles are 
-	    //split between ranks whereas parallel_strategy = "pd" referes to particle decomposition where
-	    //only particles are split between ranks
-	    if(parallel_strategy == "dd") {
-	    	nr[i] = 2 * nr[i];
-	    }
+	        //For upsampling the grid
+	        nrOrig[i] = nr[i];
+	        //parallel_strategy = "dd" referes to domain decomposition where both fields and particles are 
+	        //split between ranks whereas parallel_strategy = "pd" referes to particle decomposition where
+	        //only particles are split between ranks
+	        if(output_type == "--use-upsampled") {
+	            nr[i] = 2 * nr[i];
+	        }
             domain[i] = ippl::Index(nr[i]);
             domainOrig[i] = ippl::Index(nrOrig[i]);
         }
 
         std::array<bool, Dim> isParallel;  // Specifies SERIAL, PARALLEL dims
-	if(parallel_strategy == "dd") {
-       		isParallel.fill(true);
-	}
-	else if(parallel_strategy == "pd") {
-       		isParallel.fill(false);
-	}
+	    if(parallel_strategy == "dd") {
+           	isParallel.fill(true);
+	    }
+	    else if(parallel_strategy == "pd") {
+           	isParallel.fill(false);
+	    }
 
 
         // create mesh and layout objects for this problem domain
@@ -207,27 +210,32 @@ int main(int argc, char* argv[]) {
         double dx       = length[0] / nr[0];
         double dy       = length[1] / nr[1];
         double dz       = length[2] / nr[2];
+        double dxOrig       = length[0] / nrOrig[0];
+        double dyOrig       = length[1] / nrOrig[1];
+        double dzOrig       = length[2] / nrOrig[2];
 
         Vector_t hr     = {dx, dy, dz};
-        Vector_t hrOrig     = 2.0 *  hr;
+        Vector_t hrOrig     = {dxOrig, dyOrig, dzOrig};
         Vector_t origin = {rmin[0], rmin[1], rmin[2]};
+        msg << "Setup parameters " << endl;
 
         const bool isAllPeriodic = true;
         Mesh_t mesh(domain, hr, origin);
         Mesh_t meshOrig(domainOrig, hrOrig, origin);
 
-	std::unique_ptr<ippl::mpi::Communicator> comm_landau = 0;
-	if(parallel_strategy == "dd") {
-        	comm_landau = std::make_unique<ippl::mpi::Communicator>(*ippl::Comm);
-	}
-	else if(parallel_strategy == "dd") {
-        	comm_landau = std::make_unique<ippl::mpi::Communicator>(MPI_COMM_SELF);
-	}
+        std::unique_ptr<ippl::mpi::Communicator> comm_landau = 0;
+	    if(parallel_strategy == "dd") {
+            comm_landau = std::make_unique<ippl::mpi::Communicator>(*ippl::Comm);
+	    }
+	    else if(parallel_strategy == "pd") {
+            comm_landau = std::make_unique<ippl::mpi::Communicator>(MPI_COMM_SELF);
+	    }
         FieldLayout_t FL(*comm_landau, domain, isParallel, isAllPeriodic);
         FieldLayout_t FLOrig(*comm_landau, domainOrig, isParallel, isAllPeriodic);
 
         PLayout_t PL(FLOrig, meshOrig);
 
+        msg << "Setup all layouts " << endl;
 
         ////////////////////////////////////////////////////////////
         // Initialize an FFT object for getting rho in real space and
@@ -271,25 +279,34 @@ int main(int argc, char* argv[]) {
         ////////////////////////////////////////////////////////////
 
 
+        msg << "Before particles creation " << endl;
         IpplTimings::startTimer(particleCreation);
 
-	typedef ippl::detail::RegionLayout<double, Dim, Mesh_t>::uniform_type RegionLayout_t;
+	    typedef ippl::detail::RegionLayout<double, Dim, Mesh_t>::uniform_type RegionLayout_t;
         const RegionLayout_t& RLayout                           = PL.getRegionLayout();
         const typename RegionLayout_t::host_mirror_type Regions = RLayout.gethLocalRegions();
         Vector_t Nr, Dr, minU, maxU;
         int myRank    = ippl::Comm->rank();
         double factor = 1;
         for (unsigned d = 0; d < Dim; ++d) {
-            Nr[d] = CDF(Regions(myRank)[d].max(), alpha, kw[d])
-                    - CDF(Regions(myRank)[d].min(), alpha, kw[d]);
-            Dr[d]   = CDF(rmax[d], alpha, kw[d]) - CDF(rmin[d], alpha, kw[d]);
-            minU[d] = CDF(Regions(myRank)[d].min(), alpha, kw[d]);
-            maxU[d] = CDF(Regions(myRank)[d].max(), alpha, kw[d]);
-            factor *= Nr[d] / Dr[d];
+            if(parallel_strategy == "dd") {
+                Nr[d] = CDF(Regions(myRank)[d].max(), alpha, kw[d])
+                        - CDF(Regions(myRank)[d].min(), alpha, kw[d]);
+                Dr[d]   = CDF(rmax[d], alpha, kw[d]) - CDF(rmin[d], alpha, kw[d]);
+                minU[d] = CDF(Regions(myRank)[d].min(), alpha, kw[d]);
+                maxU[d] = CDF(Regions(myRank)[d].max(), alpha, kw[d]);
+                factor *= Nr[d] / Dr[d];
+            }
+            else if(parallel_strategy == "pd") { 
+                minU[d] = CDF(rmin[d], alpha, kw[d]);
+                maxU[d] = CDF(rmax[d], alpha, kw[d]);
+            }
         }
+        if(parallel_strategy == "pd") { 
+            factor = 1.0 / ippl::Comm->size();
+        } 
 
-
-	size_type nloc            = (size_type)(factor * totalP);
+	    size_type nloc            = (size_type)(factor * totalP);
         size_type Total_particles = 0;
 
         MPI_Allreduce(&nloc, &Total_particles, 1, MPI_UNSIGNED_LONG, MPI_SUM,
@@ -333,16 +350,16 @@ int main(int argc, char* argv[]) {
         msg << "particles created and initial conditions assigned " << endl;
 
         IpplTimings::startTimer(initializeShapeFunctionPIF);
-        P->initializeShapeFunctionPIF();
+        P->initializeShapeFunctionPIF(output_type);
         IpplTimings::stopTimer(initializeShapeFunctionPIF);
         msg << "After init shape function " << endl;
 
         double tol = std::atof(argv[9]);
-        P->initNUFFT(FLOrig, tol);
+        P->initNUFFT(FLOrig, tol, output_type);
         msg << "After init NUFFT " << endl;
-	if(parallel_strategy == "dd") {
-		P->update();
-	}
+	    if(parallel_strategy == "dd") {
+		    P->update();
+	    }
         msg << "After update " << endl;
         P->scatter();
         msg << "After scatter " << endl;
@@ -357,12 +374,12 @@ int main(int argc, char* argv[]) {
 
         // begin main timestep loop
         msg << "Starting iterations ..." << endl;
-        int warmup = 3;
-        for (int it = -warmup; it < (int)nt; it++) {
-            if (it == 0) {
-                IpplTimings::resetAllTimers();
-                IpplTimings::startTimer(mainTimer);
-            }
+        //int warmup = 3;
+        for (int it = 0; it < (int)nt; it++) {
+            //if (it == 0) {
+            //    IpplTimings::resetAllTimers();
+            //    IpplTimings::startTimer(mainTimer);
+            //}
             // LeapFrog time stepping https://en.wikipedia.org/wiki/Leapfrog_integration
             // Here, we assume a constant charge-to-mass ratio of -1 for
             // all the particles hence eliminating the need to store mass as
@@ -379,12 +396,12 @@ int main(int argc, char* argv[]) {
             IpplTimings::stopTimer(RTimer);
 
             // Apply particle BC or do update depending on parallel strategy
-	    if(parallel_strategy == "pd") {
-            	PL.applyBC(P->R, PL.getRegionLayout().getDomain());
-	    }
-	    else if(parallel_strategy == "dd") {
-	    	P->update();
-	    }
+	        if(parallel_strategy == "pd") {
+                PL.applyBC(P->R, PL.getRegionLayout().getDomain());
+	        }
+	        else if(parallel_strategy == "dd") {
+	        	P->update();
+	        }
             // scatter the charge onto the underlying grid
             P->scatter();
 
