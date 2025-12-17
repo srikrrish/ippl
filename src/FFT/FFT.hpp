@@ -40,7 +40,7 @@ namespace ippl {
         heffte::box3d<long long> inbox  = {low, high};
         heffte::box3d<long long> outbox = {low, high};
 
-        setup(inbox, outbox, params);
+        setup(inbox, outbox, params, layout);
     }
 
     template <typename Field, template <typename...> class FFT, typename Backend, typename T>
@@ -66,7 +66,8 @@ namespace ippl {
     template <typename Field, template <typename...> class FFT, typename Backend, typename T>
     void FFTBase<Field, FFT, Backend, T>::setup(const heffte::box3d<long long>& inbox,
                                                 const heffte::box3d<long long>& outbox,
-                                                const ParameterList& params) {
+                                                const ParameterList& params, 
+						const Layout_t& layout) {
         heffte::plan_options heffteOptions = heffte::default_options<heffteBackend>();
 
         if (!params.get<bool>("use_heffte_defaults")) {
@@ -96,10 +97,10 @@ namespace ippl {
 
         if constexpr (std::is_same_v<FFT<heffteBackend>, heffte::fft3d<heffteBackend>>) {
             heffte_m = std::make_shared<FFT<heffteBackend, long long>>(
-                inbox, outbox, Comm->getCommunicator(), heffteOptions);
+                inbox, outbox, layout.comm.getCommunicator(), heffteOptions);
         } else {
             heffte_m = std::make_shared<FFT<heffteBackend, long long>>(
-                inbox, outbox, params.get<int>("r2c_direction"), Comm->getCommunicator(),
+                inbox, outbox, params.get<int>("r2c_direction"), layout.comm.getCommunicator(),
                 heffteOptions);
         }
 
@@ -211,7 +212,7 @@ namespace ippl {
 
         heffte::box3d<long long> inbox  = {lowInput, highInput};
         heffte::box3d<long long> outbox = {lowInput, highInput};
-        this->setup(inbox, outbox, params);
+        this->setup(inbox, outbox, params, layoutInput);
 
         auto output_size = layoutOutput.getLocalNDIndex().size();
         auto input_size  = layoutInput.getLocalNDIndex().size();
@@ -833,7 +834,7 @@ namespace ippl {
         heffte::box3d<long long> inbox  = {lowInput, highInput};
         heffte::box3d<long long> outbox = {lowOutput, highOutput};
 
-        this->setup(inbox, outbox, params);
+        this->setup(inbox, outbox, params, layoutInput);
     }
 
     template <typename RealField>
@@ -927,7 +928,7 @@ namespace ippl {
         heffte::box3d<long long> inbox  = {lowReal, highReal};
         heffte::box3d<long long> outbox = {lowComplexFull, highComplexFull};
 
-        this->setup(inbox, outbox, params);
+        this->setup(inbox, outbox, params, layoutReal);
     }
 
     template <typename RealField>
@@ -1456,7 +1457,7 @@ namespace ippl {
             }
 
             auto* nufft_ptr = new NativeNUFFT_t(n_modes_vec, use_upsampled_inputs_m, cfg);
-            nufft_ptr->initialize(layout, MPI_COMM_WORLD);
+            nufft_ptr->initialize(layout, layout.comm.getCommunicator());
             native_nufft_ = static_cast<void*>(nufft_ptr);
         }
     }
