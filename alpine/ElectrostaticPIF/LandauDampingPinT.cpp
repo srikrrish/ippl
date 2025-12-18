@@ -287,8 +287,8 @@ int main(int argc, char *argv[]){
     const unsigned int ntFine = std::ceil(dtSlice / dtFine);
     const unsigned int ntCoarse = std::ceil(dtSlice / dtCoarse);
     const double tol = std::atof(argv[11]);
-    const std::string parallel_strategy = argv[20];
-    const std::string output_type = argv[21];
+    //const std::string parallel_strategy = argv[20];
+    const std::string output_type = argv[20];
 
 
     using bunch_type = ChargedParticlesPinT<PLayout_t>;
@@ -312,15 +312,15 @@ int main(int argc, char *argv[]){
     }
 
     std::array<bool, Dim> isParallel;  // Specifies SERIAL, PARALLEL dims
-	if(parallel_strategy == "dd") {
-       	isParallel.fill(true);
-	}
-	else {
-        //For parallel strategy 'pd' (particle decomp), 
-        //'st' (space-time) or to (time only) put spatial 
-        //mode parallelism to false
+	//if(parallel_strategy == "dd") {
+    //   	isParallel.fill(true);
+	//}
+	//else {
+    //    //For parallel strategy 'pd' (particle decomp), 
+    //    //'st' (space-time) or to (time only) put spatial 
+    //    //mode parallelism to false
        	isParallel.fill(false);
-	}
+	//}
 
     // create mesh and layout objects for this problem domain
     Vector_t kw = {0.5, 0.5, 0.5};
@@ -344,12 +344,12 @@ int main(int argc, char *argv[]){
     Mesh_t meshPIF(domainPIF, hrPIF, origin);
     Mesh_t meshPIFOrig(domainPIFOrig, hrPIFOrig, origin);
     std::unique_ptr<ippl::mpi::Communicator> comm_landau = 0;
-	if(parallel_strategy == "dd") {
-        comm_landau = std::make_unique<ippl::mpi::Communicator>(*ippl::Comm);
-	}
-	else { //pd, st or to
+	//if(parallel_strategy == "dd") {
+    //    comm_landau = std::make_unique<ippl::mpi::Communicator>(*ippl::Comm);
+	//}
+	//else { //pd, st or to
         comm_landau = std::make_unique<ippl::mpi::Communicator>(MPI_COMM_SELF);
-	}
+	//}
     FieldLayout_t FLPIC(*comm_landau, domainPIC, isParallel, isAllPeriodic);
     FieldLayout_t FLPIF(*comm_landau, domainPIF, isParallel, isAllPeriodic);
     FieldLayout_t FLPIFOrig(*comm_landau, domainPIFPOrig, isParallel, isAllPeriodic);
@@ -362,22 +362,22 @@ int main(int argc, char *argv[]){
     int myRank    = ippl::Comm->rank();
     double factor = 1;
     for (unsigned d = 0; d < Dim; ++d) {
-        if(parallel_strategy == "dd") {
-            Nr[d] = CDF(Regions(myRank)[d].max(), alpha, kw[d])
-                    - CDF(Regions(myRank)[d].min(), alpha, kw[d]);
-            Dr[d]   = CDF(rmax[d], alpha, kw[d]) - CDF(rmin[d], alpha, kw[d]);
-            minU[d] = CDF(Regions(myRank)[d].min(), alpha, kw[d]);
-            maxU[d] = CDF(Regions(myRank)[d].max(), alpha, kw[d]);
-            factor *= Nr[d] / Dr[d];
-        }
-        else { 
+        //if(parallel_strategy == "dd") {
+        //    Nr[d] = CDF(Regions(myRank)[d].max(), alpha, kw[d])
+        //            - CDF(Regions(myRank)[d].min(), alpha, kw[d]);
+        //    Dr[d]   = CDF(rmax[d], alpha, kw[d]) - CDF(rmin[d], alpha, kw[d]);
+        //    minU[d] = CDF(Regions(myRank)[d].min(), alpha, kw[d]);
+        //    maxU[d] = CDF(Regions(myRank)[d].max(), alpha, kw[d]);
+        //    factor *= Nr[d] / Dr[d];
+        //}
+        //else { 
             minU[d] = CDF(rmin[d], alpha, kw[d]);
             maxU[d] = CDF(rmax[d], alpha, kw[d]);
-        }
+        //}
     }
-    if(parallel_strategy == "pd") { 
-        factor = 1.0 / sizeSpace;
-    } 
+    //if(parallel_strategy == "pd") { 
+    factor = 1.0 / sizeSpace;
+    //} 
 
     size_type nloc = (size_type)(factor * totalP);
 
@@ -402,6 +402,7 @@ int main(int argc, char *argv[]){
    
     if(Pcoarse->coarsetype_m == "PIC") {
         Pcoarse->rhoPIC_m.initialize(meshPIC, FLPIC);
+        Pcoarse->temprhoPIC_m.initialize(meshPIC, FLPIC);
         Pcoarse->EfieldPIC_m.initialize(meshPIC, FLPIC);
         Pcoarse->initFFTSolver();
 	//Dummy solve done to do the initializations for heFFTe
@@ -666,11 +667,11 @@ int main(int argc, char *argv[]){
                 << " Perror: " << Perror
                 << endl;
 
-            if((parallel_strategy == "to") || (parallel_strategy == "st") {
+            //if((parallel_strategy == "to") || (parallel_strategy == "st") {
                 IpplTimings::startTimer(dumpData);
                 Pcoarse->writelocalError(Rerror, Perror, nc+1, it+1, rankTime, rankSpace);
                 IpplTimings::stopTimer(dumpData);
-            }
+            //}
 
             //MPI_Barrier(spaceComm);
             

@@ -61,6 +61,7 @@ public:
     //Field_t rhoPIFreal_m;
     Field_t Sk_m;
     Field_t rhoPIC_m;
+    Field_t temprhoPIC_m;
     VField_t EfieldPIC_m;
 
     Vector<int, Dim> nr_m;
@@ -605,13 +606,25 @@ public:
 
     void LeapFrogPIC(ParticleAttrib<Vector_t>& Rtemp, 
                      ParticleAttrib<Vector_t>& Ptemp, const unsigned int nt, 
-                     const double dt, const double& tStartMySlice, MPI_Comm& spaceComm) {
+                     const double dt, const double& tStartMySlice, ippl::mpi::Communicator& spaceComm) {
     
         static IpplTimings::TimerRef fieldSolvePIC = IpplTimings::getTimer("fieldSolvePIC");
+	    static IpplTimings::TimerRef scatterAllReducePICTimer = IpplTimings::getTimer("scatterAllReducePIC");           
         PLayout& PL = this->getLayout();
+        temprhoPIC_m = 0.0;
         rhoPIC_m = 0.0;
-        scatter(q, rhoPIC_m, Rtemp, spaceComm);
-    
+        
+        scatter(q, temprhoPIC_m, Rtemp);
+        
+        auto view = rhoPIC_m.getView();
+        auto viewLocal = temprhoPIC_m.getView();
+        
+        int viewSize = view.extent(0) * view.extent(1) * view.extent(2);
+        IpplTimings::startTimer(scatterAllReducePICTimer);                                  
+        MPI_Allreduce(viewLocal.data(), view.data(), viewSize, 
+                      MPI_DOUBLE, MPI_SUM, spaceComm.getCommunicator());  
+        IpplTimings::stopTimer(scatterAllReducePICTimer);
+        
         rhoPIC_m = rhoPIC_m / (hr_m[0] * hr_m[1] * hr_m[2]);
         rhoPIC_m = rhoPIC_m - (Q_m/((rmax_m[0] - rmin_m[0]) * (rmax_m[1] - rmin_m[1]) * (rmax_m[2] - rmin_m[2])));
     
@@ -635,8 +648,13 @@ public:
             PL.applyBC(Rtemp, PL.getRegionLayout().getDomain());
     
             //scatter the charge onto the underlying grid
+            temprhoPIC_m = 0.0;
             rhoPIC_m = 0.0;
-            scatter(q, rhoPIC_m, Rtemp, spaceComm);
+            scatter(q, temprhoPIC_m, Rtemp);
+            IpplTimings::startTimer(scatterAllReducePICTimer);                                  
+            MPI_Allreduce(viewLocal.data(), view.data(), viewSize, 
+                      MPI_DOUBLE, MPI_SUM, spaceComm.getCommunicator());  
+            IpplTimings::stopTimer(scatterAllReducePICTimer);
     
             rhoPIC_m = rhoPIC_m / (hr_m[0] * hr_m[1] * hr_m[2]);
             rhoPIC_m = rhoPIC_m - (Q_m/((rmax_m[0] - rmin_m[0]) * (rmax_m[1] - rmin_m[1]) * (rmax_m[2] - rmin_m[2])));
@@ -658,13 +676,26 @@ public:
     }
 
     void BorisPIC(ParticleAttrib<Vector_t>& Rtemp, ParticleAttrib<Vector_t>& Ptemp, const unsigned int nt, 
-                  const double dt, const double& tStartMySlice, const double& Bext, MPI_Comm& spaceComm) {
+                  const double dt, const double& tStartMySlice, const double& Bext, ippl::mpi::Communicator& spaceComm) {
     
         static IpplTimings::TimerRef fieldSolvePIC = IpplTimings::getTimer("fieldSolvePIC");
+	    static IpplTimings::TimerRef scatterAllReducePICTimer = IpplTimings::getTimer("scatterAllReducePIC");           
         PLayout& PL = this->getLayout();
-        rhoPIC_m = 0.0;
-        scatter(q, rhoPIC_m, Rtemp, spaceComm);
     
+        temprhoPIC_m = 0.0;
+        rhoPIC_m = 0.0;
+        
+        scatter(q, temprhoPIC_m, Rtemp);
+        
+        auto view = rhoPIC_m.getView();
+        auto viewLocal = temprhoPIC_m.getView();
+        int viewSize = view.extent(0) * view.extent(1) * view.extent(2);
+        
+        IpplTimings::startTimer(scatterAllReducePICTimer);                                  
+        MPI_Allreduce(viewLocal.data(), view.data(), viewSize, 
+                      MPI_DOUBLE, MPI_SUM, spaceComm.getCommunicator());  
+        IpplTimings::stopTimer(scatterAllReducePICTimer);
+        
         rhoPIC_m = rhoPIC_m / (hr_m[0] * hr_m[1] * hr_m[2]);
         rhoPIC_m = rhoPIC_m - (Q_m/((rmax_m[0] - rmin_m[0]) * (rmax_m[1] - rmin_m[1]) * (rmax_m[2] - rmin_m[2])));
     
@@ -718,8 +749,14 @@ public:
             PL.applyBC(Rtemp, PL.getRegionLayout().getDomain());
     
             //scatter the charge onto the underlying grid
+            temprhoPIC_m = 0.0;
             rhoPIC_m = 0.0;
-            scatter(q, rhoPIC_m, Rtemp, spaceComm);
+            scatter(q, temprhoPIC_m, Rtemp, spaceComm);
+            
+            IpplTimings::startTimer(scatterAllReducePICTimer);                                  
+            MPI_Allreduce(viewLocal.data(), view.data(), viewSize, 
+                      MPI_DOUBLE, MPI_SUM, spaceComm.getCommunicator());  
+            IpplTimings::stopTimer(scatterAllReducePICTimer);
     
             rhoPIC_m = rhoPIC_m / (hr_m[0] * hr_m[1] * hr_m[2]);
             rhoPIC_m = rhoPIC_m - (Q_m/((rmax_m[0] - rmin_m[0]) * (rmax_m[1] - rmin_m[1]) * (rmax_m[2] - rmin_m[2])));
@@ -760,18 +797,20 @@ public:
 
     void LeapFrogPIF(ParticleAttrib<Vector_t>& Rtemp,
                      ParticleAttrib<Vector_t>& Ptemp, const unsigned int& nt, 
-                     const double& dt, const double& tStartMySlice, const unsigned& /*nc*/, 
-                     const unsigned int& /*iter*/, int /*rankTime*/, int /*rankSpace*/,
-                     const std::string& propagator, MPI_Comm& spaceComm) {
+                     const double& dt, const double& tStartMySlice, const unsigned& nc, 
+                     const unsigned int& iter, int rankTime, int rankSpace,
+                     const std::string& propagator, ippl::mpi::Communicator& spaceComm) {
     
         //static IpplTimings::TimerRef dumpData = IpplTimings::getTimer("dumpData");
         PLayout& PL = this->getLayout();
         rhoPIF_m = {0.0, 0.0};
         if(propagator == "Coarse") {
-            scatterPIFNUFFT(q, rhoPIF_m, Sk_m, Rtemp, nufftType1Coarse_mp.get(), spaceComm);
+            scatterPIFNUFFT(q, rhoPIF_m, Sk_m, Rtemp, nufftType1Coarse_mp.get(), 
+                            rhoPIF_m.getLayout().comm.getCommunicator(), spaceComm.getCommunicator());
         }
         else if(propagator == "Fine") {
-            scatterPIFNUFFT(q, rhoPIF_m, Sk_m, Rtemp, nufftType1Fine_mp.get(), spaceComm);
+            scatterPIFNUFFT(q, rhoPIF_m, Sk_m, Rtemp, nufftType1Fine_mp.get(),
+                            rhoPIF_m.getLayout().comm.getCommunicator(), spaceComm.getCommunicator());
         }
     
         rhoPIF_m = rhoPIF_m / ((rmax_m[0] - rmin_m[0]) * (rmax_m[1] - rmin_m[1]) * (rmax_m[2] - rmin_m[2]));
@@ -790,12 +829,12 @@ public:
     
         time_m = tStartMySlice;
 
-        //if((time_m == 0.0) && (propagator == "Fine")) {
-        //    IpplTimings::startTimer(dumpData);
-        //    dumpFieldEnergy(nc, iter, rankTime, rankSpace);         
-        //    dumpEnergy(nc, iter, Ptemp, rankTime, rankSpace, spaceComm);
-        //    IpplTimings::stopTimer(dumpData);
-        //}
+        if((time_m == 0.0) && (propagator == "Fine")) {
+            IpplTimings::startTimer(dumpData);
+            dumpFieldEnergy(nc, iter, rankTime, rankSpace);         
+            dumpEnergy(nc, iter, Ptemp, rankTime, rankSpace, spaceComm);
+            IpplTimings::stopTimer(dumpData);
+        }
         for (unsigned int it=0; it<nt; it++) {
     
             // kick
@@ -810,10 +849,12 @@ public:
             //scatter the charge onto the underlying grid
             rhoPIF_m = {0.0, 0.0};
             if(propagator == "Coarse") {
-                scatterPIFNUFFT(q, rhoPIF_m, Sk_m, Rtemp, nufftType1Coarse_mp.get(), spaceComm);
+                scatterPIFNUFFT(q, rhoPIF_m, Sk_m, Rtemp, nufftType1Coarse_mp.get(), 
+                            rhoPIF_m.getLayout().comm.getCommunicator(), spaceComm.getCommunicator());
             }
             else if(propagator == "Fine") {
-                scatterPIFNUFFT(q, rhoPIF_m, Sk_m, Rtemp, nufftType1Fine_mp.get(), spaceComm);
+                scatterPIFNUFFT(q, rhoPIF_m, Sk_m, Rtemp, nufftType1Fine_mp.get(),
+                            rhoPIF_m.getLayout().comm.getCommunicator(), spaceComm.getCommunicator());
             }
     
             rhoPIF_m = rhoPIF_m / ((rmax_m[0] - rmin_m[0]) * (rmax_m[1] - rmin_m[1]) * (rmax_m[2] - rmin_m[2]));
@@ -833,31 +874,33 @@ public:
     
             time_m += dt;
             
-            //if(propagator == "Fine") {
-            //    IpplTimings::startTimer(dumpData);
-            //    dumpFieldEnergy(nc, iter, rankTime, rankSpace);         
-            //    dumpEnergy(nc, iter, Ptemp, rankTime, rankSpace, spaceComm);         
-            //    IpplTimings::stopTimer(dumpData);
-            //}
+            if(propagator == "Fine") {
+                IpplTimings::startTimer(dumpData);
+                dumpFieldEnergy(nc, iter, rankTime, rankSpace);         
+                dumpEnergy(nc, iter, Ptemp, rankTime, rankSpace, spaceComm);         
+                IpplTimings::stopTimer(dumpData);
+            }
         }
     }
 
 
     void BorisPIF(ParticleAttrib<Vector_t>& Rtemp,
                      ParticleAttrib<Vector_t>& Ptemp, const unsigned int& nt, 
-                     const double& dt, const double& tStartMySlice, const unsigned& /*nc*/, 
-                     const unsigned int& /*iter*/, const double& Bext,
-                     int /*rankTime*/, int /*rankSpace*/,
-                     const std::string& propagator, MPI_Comm& spaceComm) {
+                     const double& dt, const double& tStartMySlice, const unsigned& nc, 
+                     const unsigned int& iter, const double& Bext,
+                     int rankTime, int rankSpace,
+                     const std::string& propagator, ippl::mpi::Communicator& spaceComm) {
     
         //static IpplTimings::TimerRef dumpData = IpplTimings::getTimer("dumpData");
         PLayout& PL = this->getLayout();
         rhoPIF_m = {0.0, 0.0};
         if(propagator == "Coarse") {
-            scatterPIFNUFFT(q, rhoPIF_m, Sk_m, Rtemp, nufftType1Coarse_mp.get(), spaceComm);
+            scatterPIFNUFFT(q, rhoPIF_m, Sk_m, Rtemp, nufftType1Coarse_mp.get(), 
+                            rhoPIF_m.getLayout().comm.getCommunicator(), spaceComm.getCommunicator());
         }
         else if(propagator == "Fine") {
-            scatterPIFNUFFT(q, rhoPIF_m, Sk_m, Rtemp, nufftType1Fine_mp.get(), spaceComm);
+            scatterPIFNUFFT(q, rhoPIF_m, Sk_m, Rtemp, nufftType1Fine_mp.get(),
+                        rhoPIF_m.getLayout().comm.getCommunicator(), spaceComm.getCommunicator());
         }
     
         rhoPIF_m = rhoPIF_m / ((rmax_m[0] - rmin_m[0]) * (rmax_m[1] - rmin_m[1]) * (rmax_m[2] - rmin_m[2]));
@@ -874,11 +917,11 @@ public:
 
         time_m = tStartMySlice;
 
-        //if((time_m == 0.0) && (propagator == "Fine")) {
-        //    IpplTimings::startTimer(dumpData);
-        //    dumpEnergy(nc, iter, Ptemp, rankTime, rankSpace, spaceComm);
-        //    IpplTimings::stopTimer(dumpData);
-        //}
+        if((time_m == 0.0) && (propagator == "Fine")) {
+            IpplTimings::startTimer(dumpData);
+            dumpEnergy(nc, iter, Ptemp, rankTime, rankSpace, spaceComm);
+            IpplTimings::stopTimer(dumpData);
+        }
         double alpha = -0.5 * dt;
         double DrInv = 1.0 / (1 + (std::pow((alpha * Bext), 2)));
         Vector_t rmax = rmax_m;
@@ -920,10 +963,12 @@ public:
             //scatter the charge onto the underlying grid
             rhoPIF_m = {0.0, 0.0};
             if(propagator == "Coarse") {
-                scatterPIFNUFFT(q, rhoPIF_m, Sk_m, Rtemp, nufftType1Coarse_mp.get(), spaceComm);
+                scatterPIFNUFFT(q, rhoPIF_m, Sk_m, Rtemp, nufftType1Coarse_mp.get(), 
+                            rhoPIF_m.getLayout().comm.getCommunicator(), spaceComm.getCommunicator());
             }
             else if(propagator == "Fine") {
-                scatterPIFNUFFT(q, rhoPIF_m, Sk_m, Rtemp, nufftType1Fine_mp.get(), spaceComm);
+                scatterPIFNUFFT(q, rhoPIF_m, Sk_m, Rtemp, nufftType1Fine_mp.get(),
+                        rhoPIF_m.getLayout().comm.getCommunicator(), spaceComm.getCommunicator());
             }
     
             rhoPIF_m = rhoPIF_m / ((rmax_m[0] - rmin_m[0]) * (rmax_m[1] - rmin_m[1]) * (rmax_m[2] - rmin_m[2]));
@@ -960,11 +1005,11 @@ public:
 
             time_m += dt;
             
-            //if(propagator == "Fine") {
-            //    IpplTimings::startTimer(dumpData);
-            //    dumpEnergy(nc, iter, Ptemp, rankTime, rankSpace, spaceComm);
-            //    IpplTimings::stopTimer(dumpData);
-            //}
+            if(propagator == "Fine") {
+                IpplTimings::startTimer(dumpData);
+                dumpEnergy(nc, iter, Ptemp, rankTime, rankSpace, spaceComm);
+                IpplTimings::stopTimer(dumpData);
+            }
         }
     }
 
