@@ -8,7 +8,7 @@
 //  Usage:
 //     srun ./LandauDampingPinT <nmx> <nmy> <nmz> <nx> <ny> <nz> <Np> <Tend> <dtfine> <dtcoarse> <tolParareal> 
 //          <nCycles> <ShapeType> <degree> <No. of space procs> <No. of time procs> 
-//          <coarseTol> <fineTol> <coarseType> --info 5
+//          <coarseTol> <fineTol> <coarseType> <outputType> --info 5
 //     nmx       = No. of Fourier modes in the x-direction
 //     nmy       = No. of Fourier modes in the y-direction
 //     nmz       = No. of Fourier modes in the z-direction
@@ -25,8 +25,9 @@
 //     coarseTol = Coarse tolerance for PIF if we use PIF as a coarse propagator (will not be used when PIC is used)
 //     fineTol = fine tolerance for PIF
 //     coarseType = Type of coarse propagator (PIF or PIC)
+//     outputType = output type for NUFFTs: upsampled or pruned
 //     Example:
-//     srun ./LandauDampingPinT 32 32 32 16 16 16 655360 19.2 0.05 0.05 1e-5 1 B-spline 1 4 16 1e-2 1e-4 PIC --info 5
+//     srun ./LandauDampingPinT 32 32 32 16 16 16 655360 19.2 0.05 0.05 1e-5 1 B-spline 1 4 16 1e-2 1e-4 PIC --use-upsampled --info 5
 //
 // Copyright (c) 2022, Sriramkrishnan Muralikrishnan,
 // Jülich Supercomputing Centre, Jülich, Germany.
