@@ -323,7 +323,7 @@ public:
     }
 
     void dumpEnergy(const unsigned int& nc, const unsigned int& iter, ParticleAttrib<Vector_t>& Ptemp,
-                    int rankTime, int rankSpace, const ippl::mpi::Communicator& spaceComm) {
+                    int rankTime, int rankSpace, ippl::mpi::Communicator& spaceComm) {
 
         double potentialEnergy, kineticEnergy;
         double temp = 0.0;
@@ -404,7 +404,7 @@ public:
                                 }, Kokkos::Sum<double>(temp));
 
         temp *= 0.5;
-        double globaltemp = 0.0;
+        globaltemp = 0.0;
         spaceComm.reduce(temp, globaltemp, 1, std::plus<double>());
 
         kineticEnergy = globaltemp;
@@ -801,7 +801,7 @@ public:
                      const unsigned int& iter, int rankTime, int rankSpace,
                      const std::string& propagator, ippl::mpi::Communicator& spaceComm) {
     
-        //static IpplTimings::TimerRef dumpData = IpplTimings::getTimer("dumpData");
+        static IpplTimings::TimerRef dumpData = IpplTimings::getTimer("dumpData");
         PLayout& PL = this->getLayout();
         rhoPIF_m = {0.0, 0.0};
         if(propagator == "Coarse") {
@@ -891,7 +891,7 @@ public:
                      int rankTime, int rankSpace,
                      const std::string& propagator, ippl::mpi::Communicator& spaceComm) {
     
-        //static IpplTimings::TimerRef dumpData = IpplTimings::getTimer("dumpData");
+        static IpplTimings::TimerRef dumpData = IpplTimings::getTimer("dumpData");
         PLayout& PL = this->getLayout();
         rhoPIF_m = {0.0, 0.0};
         if(propagator == "Coarse") {

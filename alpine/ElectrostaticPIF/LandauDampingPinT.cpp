@@ -227,7 +227,7 @@ int main(int argc, char *argv[]){
     ippl::initialize(argc, argv);
     { 
     int spaceColor, timeColor;
-    MPI_Comm spaceComm, timeComm;
+    //MPI_Comm spaceComm, timeComm;
 
     int spaceProcs = std::atoi(argv[15]);
     //int timeProcs = std::atoi(argv[16]);
@@ -303,7 +303,7 @@ int main(int argc, char *argv[]){
     ippl::NDIndex<Dim> domainPIF;
     ippl::NDIndex<Dim> domainPIFOrig;
     for (unsigned i = 0; i< Dim; i++) {
-        nmPIFOrig[i] = nmPIF[i]
+        nmPIFOrig[i] = nmPIF[i];
 	    if(output_type == "--use-upsampled") {
 	        nmPIF[i] = 2 * nmPIF[i];
 	    }
@@ -353,7 +353,7 @@ int main(int argc, char *argv[]){
 	//}
     FieldLayout_t FLPIC(*comm_landau, domainPIC, isParallel, isAllPeriodic);
     FieldLayout_t FLPIF(*comm_landau, domainPIF, isParallel, isAllPeriodic);
-    FieldLayout_t FLPIFOrig(*comm_landau, domainPIFPOrig, isParallel, isAllPeriodic);
+    FieldLayout_t FLPIFOrig(*comm_landau, domainPIFOrig, isParallel, isAllPeriodic);
     PLayout_t PL(FLPIC, meshPIC);
 
 	typedef ippl::detail::RegionLayout<double, Dim, Mesh_t>::uniform_type RegionLayout_t;
@@ -372,8 +372,8 @@ int main(int argc, char *argv[]){
         //    factor *= Nr[d] / Dr[d];
         //}
         //else { 
-            minU[d] = CDF(rmin[d], alpha, kw[d]);
-            maxU[d] = CDF(rmax[d], alpha, kw[d]);
+            minU[d] = CDF(rmin[d], alpha[d], kw[d]);
+            maxU[d] = CDF(rmax[d], alpha[d], kw[d]);
         //}
     }
     //if(parallel_strategy == "pd") { 
@@ -447,8 +447,8 @@ int main(int argc, char *argv[]){
     ////////////////////////////////////////////////////////////
 
 
-    using buffer_type = ippl::mpi::Communicator::buffer_type;
     using MemorySpace = Kokkos::DefaultExecutionSpace::memory_space;
+    //using buffer_type = ippl::mpi::Communicator::buffer_type;
     int tag;
 
     Pcoarse->shapetype_m = argv[13];
@@ -495,7 +495,7 @@ int main(int argc, char *argv[]){
     }
     else {
         size_type bufSize = Pbegin->packedSize<MemorySpace>(nloc);
-        buffer_type buf = ippl::Comm->getBuffer<MemorySpace>(bufSize);
+        auto buf = ippl::Comm->getBuffer<MemorySpace>(bufSize);
         timeComm.recv(rankTime-1, tag, *Pbegin, *buf, bufSize, nloc);
         buf->resetReadPos();
     }
@@ -526,7 +526,7 @@ int main(int argc, char *argv[]){
     IpplTimings::startTimer(timeCommunication);
     if(rankTime < sizeTime-1) {
         size_type bufSize = Pend->packedSize<MemorySpace>(nloc);
-        buffer_type buf = ippl::Comm->getBuffer<MemorySpace>(bufSize);
+        auto buf = ippl::Comm->getBuffer<MemorySpace>(bufSize);
         MPI_Request request;
         timeComm.isend(rankTime+1, tag, *Pend, *buf, request, nloc);
         buf->resetWritePos();
@@ -607,10 +607,11 @@ int main(int argc, char *argv[]){
             
             if(recvCriteria && (!isPreviousDomainConverged)) {
                 size_type bufSize = Pbegin->packedSize<MemorySpace>(nloc);
-                buffer_type buf = ippl::Comm->getBuffer<MemorySpace>(bufSize);
+                auto buf = ippl::Comm->getBuffer<MemorySpace>(bufSize);
                 timeComm.recv(rankTime-sign, tag, *Pbegin, *buf, bufSize, nloc);
                 buf->resetReadPos();
-                timeComm.recv(&isPreviousDomainConverged, 1, rankTime-sign, tagbool, MPI_STATUS_IGNORE);
+                ippl::mpi::Status status;
+                timeComm.recv(&isPreviousDomainConverged, 1, rankTime-sign, tagbool, status);
                 IpplTimings::startTimer(deepCopy);
                 Kokkos::deep_copy(Pcoarse->R0.getView(), Pbegin->R.getView());
                 Kokkos::deep_copy(Pcoarse->P0.getView(), Pbegin->P.getView());
@@ -652,7 +653,7 @@ int main(int argc, char *argv[]){
             IpplTimings::startTimer(timeCommunication);
             if(sendCriteria) {
                 size_type bufSize = Pend->packedSize<MemorySpace>(nloc);
-                buffer_type buf = ippl::Comm->getBuffer<MemorySpace>(bufSize);
+                auto buf = ippl::Comm->getBuffer<MemorySpace>(bufSize);
                 MPI_Request request;
                 timeComm.isend(rankTime+sign, tag, *Pend, *buf, request, nloc);
                 buf->resetWritePos();
@@ -705,7 +706,7 @@ int main(int argc, char *argv[]){
             IpplTimings::startTimer(timeCommunication);
             if(recvCriteria) {
                 size_type bufSize = Pbegin->packedSize<MemorySpace>(nloc);
-                buffer_type buf = ippl::Comm->getBuffer<MemorySpace>(bufSize);
+                auto buf = ippl::Comm->getBuffer<MemorySpace>(bufSize);
                 timeComm.recv(rankTime+sign, tag, *Pbegin, *buf, bufSize, nloc);
                 buf->resetReadPos();
             }
@@ -736,7 +737,7 @@ int main(int argc, char *argv[]){
             IpplTimings::startTimer(timeCommunication);
             if(sendCriteria) {
                 size_type bufSize = Pend->packedSize<MemorySpace>(nloc);
-                buffer_type buf = ippl::Comm->getBuffer<MemorySpace>(bufSize);
+                auto buf = ippl::Comm->getBuffer<MemorySpace>(bufSize);
                 MPI_Request request;
                 timeComm.isend(rankTime-sign, tag, *Pend, *buf, request, nloc);
                 buf->resetWritePos();
@@ -752,8 +753,10 @@ int main(int argc, char *argv[]){
     IpplTimings::print();
     IpplTimings::print(std::string("timing.dat"));
 
-    MPI_Comm_free(spaceComm.getCommunicator());
-    MPI_Comm_free(timeComm.getCommunicator());
+    //MPI_Comm_free(&spaceComm.getCommunicator());
+    //MPI_Comm_free(&timeComm.getCommunicator());
+    spaceComm.free();
+    timeComm.free();
     }
     ippl::finalize();
     //Ippl::Comm->finalize();

@@ -50,6 +50,19 @@ namespace ippl {
 
             void abort(int errorcode = -1) { MPI_Abort(*comm_m, errorcode); }
 
+            void free() noexcept {
+                if (!comm_m) return;
+            
+                MPI_Comm& comm = *comm_m;
+            
+                if (comm != MPI_COMM_NULL &&
+                    comm != MPI_COMM_WORLD &&
+                    comm != MPI_COMM_SELF)
+                {
+                    MPI_Comm_free(&comm);
+                    comm = MPI_COMM_NULL;
+                }
+            }
             /*
              * Blocking point-to-point communication
              *
