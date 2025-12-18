@@ -289,8 +289,8 @@ public:
             Kokkos::Sum<double>(fieldEnergy), Kokkos::Max<double>(EzAmp));
 
         Kokkos::fence();
-	double globalfieldEnergy = 0.0;
-	double globalEzAmp = 0.0;
+	    double globalfieldEnergy = 0.0;
+    	double globalEzAmp = 0.0;
         layout.comm.reduce(fieldEnergy, globalfieldEnergy, 1, std::plus<double>(), 0);
         layout.comm.reduce(EzAmp, globalEzAmp, 1, std::greater<double>(), 0);
         double volume = (rmax_m[0] - rmin_m[0]) * (rmax_m[1] - rmin_m[1]) * (rmax_m[2] - rmin_m[2]);

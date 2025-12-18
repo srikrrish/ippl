@@ -149,7 +149,7 @@ double CDF(const double& x, const double& alpha, const double& k) {
 }
 
 double computeRL2Error(ParticleAttrib<Vector_t>& Q, ParticleAttrib<Vector_t>& QprevIter, 
-                      Vector_t& length, MPI_Comm& spaceComm) {
+                      Vector_t& length, ippl::mpi::Communicator& spaceComm) {
     
     auto Qview = Q.getView();
     auto QprevIterView = QprevIter.getView();
@@ -181,9 +181,9 @@ double computeRL2Error(ParticleAttrib<Vector_t>& Q, ParticleAttrib<Vector_t>& Qp
 
     Kokkos::fence();
     double globalError = 0.0;
-    MPI_Allreduce(&localError, &globalError, 1, MPI_DOUBLE, MPI_SUM, spaceComm);
+    spaceComm.allreduce(localError, globalError, 1, std::plus<double>());
     double globalNorm = 0.0;
-    MPI_Allreduce(&localNorm, &globalNorm, 1, MPI_DOUBLE, MPI_SUM, spaceComm);
+    spaceComm.allreduce(localNorm, globalNorm, 1, std::plus<double>());
 
     double relError = std::sqrt(globalError) / std::sqrt(globalNorm);
     
@@ -191,7 +191,8 @@ double computeRL2Error(ParticleAttrib<Vector_t>& Q, ParticleAttrib<Vector_t>& Qp
 
 }
 
-double computePL2Error(ParticleAttrib<Vector_t>& Q, ParticleAttrib<Vector_t>& QprevIter, MPI_Comm& spaceComm) {
+double computePL2Error(ParticleAttrib<Vector_t>& Q, ParticleAttrib<Vector_t>& QprevIter, 
+                        ippl::mpi::Communicator& spaceComm) {
     
     auto Qview = Q.getView();
     auto QprevIterView = QprevIter.getView();
@@ -209,9 +210,9 @@ double computePL2Error(ParticleAttrib<Vector_t>& Q, ParticleAttrib<Vector_t>& Qp
 
     Kokkos::fence();
     double globalError = 0.0;
-    MPI_Allreduce(&localError, &globalError, 1, MPI_DOUBLE, MPI_SUM, spaceComm);
+    spaceComm.allreduce(localError, globalError, 1, std::plus<double>());
     double globalNorm = 0.0;
-    MPI_Allreduce(&localNorm, &globalNorm, 1, MPI_DOUBLE, MPI_SUM, spaceComm);
+    spaceComm.allreduce(localNorm, globalNorm, 1, std::plus<double>());
 
     double relError = std::sqrt(globalError) / std::sqrt(globalNorm);
     
@@ -444,7 +445,8 @@ int main(int argc, char *argv[]){
     ////////////////////////////////////////////////////////////
 
 
-    using buffer_type = ippl::Communicate::buffer_type;
+    using buffer_type = ippl::mpi::Communicator::buffer_type;
+    using MemorySpace = Kokkos::DefaultExecutionSpace::memory_space;
     int tag;
 
     Pcoarse->shapetype_m = argv[13];
@@ -490,9 +492,9 @@ int main(int argc, char *argv[]){
         Kokkos::fence();
     }
     else {
-        size_type bufSize = Pbegin->packedSize(nloc);
-        buffer_type buf = Ippl::Comm->getBuffer(IPPL_PARAREAL_RECV, bufSize);
-        Ippl::Comm->recv(rankTime-1, tag, *Pbegin, *buf, bufSize, nloc, timeComm);
+        size_type bufSize = Pbegin->packedSize<MemorySpace>(nloc);
+        buffer_type buf = ippl::Comm->getBuffer<MemorySpace>(bufSize);
+        timeComm.recv(rankTime-1, tag, *Pbegin, *buf, bufSize, nloc);
         buf->resetReadPos();
     }
     IpplTimings::stopTimer(timeCommunication);
@@ -521,10 +523,10 @@ int main(int argc, char *argv[]){
 
     IpplTimings::startTimer(timeCommunication);
     if(rankTime < sizeTime-1) {
-        size_type bufSize = Pend->packedSize(nloc);
-        buffer_type buf = Ippl::Comm->getBuffer(IPPL_PARAREAL_SEND, bufSize);
+        size_type bufSize = Pend->packedSize<MemorySpace>(nloc);
+        buffer_type buf = ippl::Comm->getBuffer<MemorySpace>(bufSize);
         MPI_Request request;
-        Ippl::Comm->isend(rankTime+1, tag, *Pend, *buf, request, nloc, timeComm);
+        timeComm.isend(rankTime+1, tag, *Pend, *buf, request, nloc);
         buf->resetWritePos();
         MPI_Wait(&request, MPI_STATUS_IGNORE);
     }
@@ -567,7 +569,7 @@ int main(int argc, char *argv[]){
                 isPreviousDomainConverged = true;
             }
             tStartMySlice = (nc * tEndCycle) + (rankTime * dtSlice);
-            msg.setPrintNode(Ippl::Comm->size()-1);
+            msg.setPrintNode(ippl::Comm->size()-1);
         }
         //odd cycles
         else {
@@ -602,12 +604,11 @@ int main(int argc, char *argv[]){
             int tagbool = 1300;//Ippl::Comm->next_tag(IPPL_PARAREAL_APP, IPPL_APP_CYCLE);
             
             if(recvCriteria && (!isPreviousDomainConverged)) {
-                size_type bufSize = Pbegin->packedSize(nloc);
-                buffer_type buf = Ippl::Comm->getBuffer(IPPL_PARAREAL_RECV, bufSize);
-                Ippl::Comm->recv(rankTime-sign, tag, *Pbegin, *buf, bufSize, nloc, timeComm);
+                size_type bufSize = Pbegin->packedSize<MemorySpace>(nloc);
+                buffer_type buf = ippl::Comm->getBuffer<MemorySpace>(bufSize);
+                timeComm.recv(rankTime-sign, tag, *Pbegin, *buf, bufSize, nloc);
                 buf->resetReadPos();
-                MPI_Recv(&isPreviousDomainConverged, 1, MPI_C_BOOL, rankTime-sign, tagbool, 
-                        timeComm, MPI_STATUS_IGNORE);
+                timeComm.recv(&isPreviousDomainConverged, 1, rankTime-sign, tagbool, MPI_STATUS_IGNORE);
                 IpplTimings::startTimer(deepCopy);
                 Kokkos::deep_copy(Pcoarse->R0.getView(), Pbegin->R.getView());
                 Kokkos::deep_copy(Pcoarse->P0.getView(), Pbegin->P.getView());
@@ -648,13 +649,13 @@ int main(int argc, char *argv[]){
             
             IpplTimings::startTimer(timeCommunication);
             if(sendCriteria) {
-                size_type bufSize = Pend->packedSize(nloc);
-                buffer_type buf = Ippl::Comm->getBuffer(IPPL_PARAREAL_SEND, bufSize);
+                size_type bufSize = Pend->packedSize<MemorySpace>(nloc);
+                buffer_type buf = ippl::Comm->getBuffer<MemorySpace>(bufSize);
                 MPI_Request request;
-                Ippl::Comm->isend(rankTime+sign, tag, *Pend, *buf, request, nloc, timeComm);
+                timeComm.isend(rankTime+sign, tag, *Pend, *buf, request, nloc);
                 buf->resetWritePos();
                 MPI_Wait(&request, MPI_STATUS_IGNORE);
-                MPI_Send(&isConverged, 1, MPI_C_BOOL, rankTime+sign, tagbool, timeComm);
+                timeComm.send(&isConverged, 1, rankTime+sign, tagbool);
             }
             IpplTimings::stopTimer(timeCommunication);
             
@@ -699,9 +700,9 @@ int main(int argc, char *argv[]){
 
             IpplTimings::startTimer(timeCommunication);
             if(recvCriteria) {
-                size_type bufSize = Pbegin->packedSize(nloc);
-                buffer_type buf = Ippl::Comm->getBuffer(IPPL_PARAREAL_RECV, bufSize);
-                Ippl::Comm->recv(rankTime+sign, tag, *Pbegin, *buf, bufSize, nloc, timeComm);
+                size_type bufSize = Pbegin->packedSize<MemorySpace>(nloc);
+                buffer_type buf = ippl::Comm->getBuffer<MemorySpace>(bufSize);
+                timeComm.recv(rankTime+sign, tag, *Pbegin, *buf, bufSize, nloc);
                 buf->resetReadPos();
             }
             IpplTimings::stopTimer(timeCommunication);
@@ -730,10 +731,10 @@ int main(int argc, char *argv[]){
 
             IpplTimings::startTimer(timeCommunication);
             if(sendCriteria) {
-                size_type bufSize = Pend->packedSize(nloc);
-                buffer_type buf = Ippl::Comm->getBuffer(IPPL_PARAREAL_SEND, bufSize);
+                size_type bufSize = Pend->packedSize<MemorySpace>(nloc);
+                buffer_type buf = ippl::Comm->getBuffer<MemorySpace>(bufSize);
                 MPI_Request request;
-                Ippl::Comm->isend(rankTime-sign, tag, *Pend, *buf, request, nloc, timeComm);
+                timeComm.isend(rankTime-sign, tag, *Pend, *buf, request, nloc);
                 buf->resetWritePos();
                 MPI_Wait(&request, MPI_STATUS_IGNORE);
             }
@@ -747,11 +748,11 @@ int main(int argc, char *argv[]){
     IpplTimings::print();
     IpplTimings::print(std::string("timing.dat"));
 
-    MPI_Comm_free(&spaceComm);
-    MPI_Comm_free(&timeComm);
+    MPI_Comm_free(spaceComm.getCommunicator());
+    MPI_Comm_free(timeComm.getCommunicator());
     }
-    Ippl::finalize();
-    Ippl::Comm->finalize();
+    ippl::finalize();
+    //Ippl::Comm->finalize();
 
 
     return 0;
