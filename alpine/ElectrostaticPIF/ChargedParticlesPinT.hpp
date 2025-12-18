@@ -17,7 +17,7 @@
 //
 
 #include "Ippl.h"
-#include "Solver/FFTPeriodicPoissonSolver.h"
+#include "PoissonSolvers/FFTPeriodicPoissonSolver.h"
 
 // dimension of our positions
 constexpr unsigned Dim = 3;
@@ -25,6 +25,7 @@ constexpr unsigned Dim = 3;
 // some typedefs
 typedef ippl::ParticleSpatialLayout<double,Dim>   PLayout_t;
 typedef ippl::UniformCartesian<double, Dim>        Mesh_t;
+using Centering_t = Mesh_t::DefaultCentering;
 typedef ippl::FieldLayout<Dim> FieldLayout_t;
 
 using size_type = ippl::detail::size_type;
@@ -32,19 +33,19 @@ using size_type = ippl::detail::size_type;
 template<typename T, unsigned Dim>
 using Vector = ippl::Vector<T, Dim>;
 
-template<typename T, unsigned Dim>
-using Field = ippl::Field<T, Dim>;
+template <typename T, unsigned Dim, class Mesh, class Centering>
+using Field = ippl::Field<T, Dim, Mesh, Centering>;
 
 template<typename T>
 using ParticleAttrib = ippl::ParticleAttrib<T>;
 
 typedef Vector<double, Dim>  Vector_t;
-typedef Field<double, Dim>   Field_t;
-typedef Field<Kokkos::complex<double>, Dim>   CxField_t;
-typedef Field<Vector_t, Dim> VField_t;
-typedef ippl::FFTPeriodicPoissonSolver<Vector_t, double, Dim> Solver_t;
+typedef Field<double, Dim, Mesh_t, Centering_t> Field_t;
+typedef Field<Kokkos::complex<double>, Dim, Mesh_t, Centering_t> CxField_t;
+typedef Field<Vector_t, Dim, Mesh_t, Centering_t>::uniform_type VField_t;
+typedef ippl::FFTPeriodicPoissonSolver<VField_t, Field_t> Solver_t;
 
-typedef ippl::FFT<ippl::RCTransform, Dim, double> FFT_t;
+typedef ippl::FFT<ippl::RCTransform, Field_t> FFT_t;
 
 const double pi = std::acos(-1.0);
 
@@ -56,8 +57,8 @@ class ChargedParticlesPinT : public ippl::ParticleBase<PLayout> {
 public:
 
     CxField_t rhoPIF_m;
-    CxField_t rhoPIFhalf_m;
-    Field_t rhoPIFreal_m;
+    //CxField_t rhoPIFhalf_m;
+    //Field_t rhoPIFreal_m;
     Field_t Sk_m;
     Field_t rhoPIC_m;
     VField_t EfieldPIC_m;
@@ -76,7 +77,7 @@ public:
     size_type Np_m;
     
     std::shared_ptr<Solver_t> solver_mp;
-    std::shared_ptr<FFT_t> fft_mp;
+    //std::shared_ptr<FFT_t> fft_mp;
     
     double time_m;
 
@@ -86,7 +87,7 @@ public:
 
     int shapedegree_m;
 
-    std::shared_ptr<ippl::FFT<ippl::NUFFTransform, 3, double>> nufftType1Fine_mp,nufftType2Fine_mp,
+    std::shared_ptr<ippl::FFT<ippl::NUFFTransform, Field_t>> nufftType1Fine_mp,nufftType2Fine_mp,
                                                                nufftType1Coarse_mp,nufftType2Coarse_mp;
 
 public:
@@ -104,20 +105,18 @@ public:
     //  This constructor is mandatory for all derived classes from
     //  ParticleBase as the bunch buffer uses this
     //*/
-    //ChargedParticlesPinT(PLayout& pl)
-    //: ippl::ParticleBase<PLayout>(pl)
-    //{
-    //    // register the particle attributes
-    //    this->addAttribute(q);
-    //    this->addAttribute(P);
-    //    this->addAttribute(E);
-    //    this->addAttribute(R0);
-    //    this->addAttribute(P0);
-    //    this->addAttribute(RprevIter);
-    //    this->addAttribute(PprevIter);
-    //    //this->addAttribute(Rfine);
-    //    //this->addAttribute(Pfine);
-    //}
+    ChargedParticlesPinT(PLayout& pl)
+    : ippl::ParticleBase<PLayout>(pl)
+    {
+        // register the particle attributes
+        this->addAttribute(q);
+        this->addAttribute(P);
+        this->addAttribute(E);
+        this->addAttribute(R0);
+        this->addAttribute(P0);
+        this->addAttribute(RprevIter);
+        this->addAttribute(PprevIter);
+    }
     
     ChargedParticlesPinT(PLayout& pl,
                      Vector_t hr,
@@ -174,7 +173,7 @@ public:
 
 
     void initNUFFTs(FieldLayout_t& FLPIF, double& coarseTol,
-                    double& fineTol) {
+                    double& fineTol, const std::string& output_type) {
         
         ippl::ParameterList fftCoarseParams,fftFineParams;
 
@@ -210,12 +209,20 @@ public:
 
         fftFineParams.add("use_finufft_defaults", false);
         fftCoarseParams.add("use_finufft_defaults", false);
+	    if(output_type == "--use-upsampled") {
+            fftFineParams.add("use_upsampled_inputs", true);
+            fftCoarseParams.add("use_upsampled_inputs", true);
+	    }
+        else {
+            fftFineParams.add("use_upsampled_inputs", false);
+            fftCoarseParams.add("use_upsampled_inputs", false);
+	    }
         
-        nufftType1Fine_mp = std::make_shared<ippl::FFT<ippl::NUFFTransform, 3, double>>(FLPIF, this->getLocalNum(), 1, fftFineParams);
-        nufftType2Fine_mp = std::make_shared<ippl::FFT<ippl::NUFFTransform, 3, double>>(FLPIF, this->getLocalNum(), 2, fftFineParams);
+        nufftType1Fine_mp = std::make_shared<ippl::FFT<ippl::NUFFTransform, Field_t>>(FLPIF, this->getLocalNum(), 1, fftFineParams);
+        nufftType2Fine_mp = std::make_shared<ippl::FFT<ippl::NUFFTransform, Field_t>>(FLPIF, this->getLocalNum(), 2, fftFineParams);
 
-        nufftType1Coarse_mp = std::make_shared<ippl::FFT<ippl::NUFFTransform, 3, double>>(FLPIF, this->getLocalNum(), 1, fftCoarseParams);
-        nufftType2Coarse_mp = std::make_shared<ippl::FFT<ippl::NUFFTransform, 3, double>>(FLPIF, this->getLocalNum(), 2, fftCoarseParams);
+        nufftType1Coarse_mp = std::make_shared<ippl::FFT<ippl::NUFFTransform, Field_t>>(FLPIF, this->getLocalNum(), 1, fftCoarseParams);
+        nufftType2Coarse_mp = std::make_shared<ippl::FFT<ippl::NUFFTransform, Field_t>>(FLPIF, this->getLocalNum(), 2, fftCoarseParams);
     }
     
     void dumpFieldEnergy(const unsigned int& nc, const unsigned int& iter, int rankTime, int rankSpace) {
@@ -227,10 +234,11 @@ public:
         const int nghost = rhoPIF_m.getNghost();
         using mdrange_type = Kokkos::MDRangePolicy<Kokkos::Rank<Dim>>;
       
-        const FieldLayout_t& layout = rhoPIF_m.getLayout(); 
+        FieldLayout_t& layout = rhoPIF_m.getLayout(); 
         const Mesh_t& mesh = rhoPIF_m.get_mesh();
         const Vector<double, Dim>& dx = mesh.getMeshSpacing();
         const auto& domain = layout.getDomain();
+        const auto& lDom   = layout.getLocalNDIndex();
         Vector<double, Dim> Len;
         Vector<int, Dim> N;
 
@@ -243,10 +251,10 @@ public:
         Kokkos::complex<double> imag = {0.0, 1.0};
         double pi = std::acos(-1.0);
         Kokkos::parallel_reduce("Ez energy and Max",
-                              mdrange_type({0, 0, 0},
-                                           {N[0],
-                                            N[1],
-                                            N[2]}),
+                              mdrange_type({nghost, nghost, nghost}, 
+                                           {rhoview.extent(0)-nghost, 
+                                            rhoview.extent(1)-nghost, 
+                                            rhoview.extent(2)-nghost}),
                               KOKKOS_LAMBDA(const int i,
                                             const int j,
                                             const int k,
@@ -255,17 +263,22 @@ public:
         {
         
             Vector<int, 3> iVec = {i, j, k};
+            for (unsigned d = 0; d < Dim; ++d) {
+                iVec[d] = iVec[d] - nghost + lDom[d].first();
+            }
             Vector<double, 3> kVec;
             double Dr = 0.0;
             for(size_t d = 0; d < Dim; ++d) {
-                kVec[d] = 2 * pi / Len[d] * (iVec[d] - (N[d] / 2));
+                //kVec[d] = 2 * pi / Len[d] * (iVec[d] - (N[d] / 2));
+                bool shift            = (iVec[d] > (N[d] / 2));
+                kVec[d]               = 2 * pi / Len[d] * (iVec[d] - shift * N[d]);
                 Dr += kVec[d] * kVec[d];
             }
 
             Kokkos::complex<double> Ek = {0.0, 0.0}; 
             bool isNotZero = (Dr != 0.0);
             double factor = isNotZero * (1.0 / (Dr + ((!isNotZero) * 1.0))); 
-            Ek = -(imag * kVec[2] * rhoview(i+nghost,j+nghost,k+nghost) * factor);
+            Ek = -(imag * kVec[2] * rhoview(i,j,k) * factor);
             double myVal = Ek.real() * Ek.real() + Ek.imag() * Ek.imag();
 
             tlSum += myVal;
@@ -278,6 +291,10 @@ public:
         
 
         Kokkos::fence();
+	    double globalfieldEnergy = 0.0;
+    	double globalEzAmp = 0.0;
+        layout.comm.reduce(fieldEnergy, globalfieldEnergy, 1, std::plus<double>(), 0);
+        layout.comm.reduce(EzAmp, globalEzAmp, 1, std::greater<double>(), 0);
         double volume = (rmax_m[0] - rmin_m[0]) * (rmax_m[1] - rmin_m[1]) * (rmax_m[2] - rmin_m[2]);
         fieldEnergy *= volume;
 
@@ -293,19 +310,19 @@ public:
             fname << ".csv";
 
 
-            Inform csvout(NULL, fname.str().c_str(), Inform::APPEND, Ippl::Comm->rank());
+            Inform csvout(NULL, fname.str().c_str(), Inform::APPEND, ippl::Comm->rank());
             csvout.precision(10);
             csvout.setf(std::ios::scientific, std::ios::floatfield);
 
 
             csvout << time_m << " "
-                   << fieldEnergy << " "
-                   << EzAmp << endl;
+                   << globalfieldEnergy << " "
+                   << globalEzAmp << endl;
         }
     }
 
     void dumpEnergy(const unsigned int& nc, const unsigned int& iter, ParticleAttrib<Vector_t>& Ptemp,
-                    int rankTime, int rankSpace, const MPI_Comm& spaceComm = MPI_COMM_WORLD) {
+                    int rankTime, int rankSpace, const ippl::mpi::Communicator& spaceComm) {
 
         double potentialEnergy, kineticEnergy;
         double temp = 0.0;
@@ -314,10 +331,11 @@ public:
         const int nghost = rhoPIF_m.getNghost();
         using mdrange_type = Kokkos::MDRangePolicy<Kokkos::Rank<Dim>>;
       
-        const FieldLayout_t& layout = rhoPIF_m.getLayout(); 
+        FieldLayout_t& layout = rhoPIF_m.getLayout(); 
         const Mesh_t& mesh = rhoPIF_m.get_mesh();
         const Vector<double, Dim>& dx = mesh.getMeshSpacing();
         const auto& domain = layout.getDomain();
+        const auto& lDom   = layout.getLocalNDIndex();
         Vector<double, Dim> Len;
         Vector<int, Dim> N;
 
@@ -330,10 +348,10 @@ public:
         Kokkos::complex<double> imag = {0.0, 1.0};
         double pi = std::acos(-1.0);
         Kokkos::parallel_reduce("Potential energy",
-                              mdrange_type({0, 0, 0},
-                                           {N[0],
-                                            N[1],
-                                            N[2]}),
+                              mdrange_type({nghost, nghost, nghost}, 
+                                           {rhoview.extent(0)-nghost, 
+                                            rhoview.extent(1)-nghost, 
+                                            rhoview.extent(2)-nghost}),
                               KOKKOS_LAMBDA(const int i,
                                             const int j,
                                             const int k,
@@ -341,16 +359,21 @@ public:
         {
         
             Vector<int, 3> iVec = {i, j, k};
+            for (unsigned d = 0; d < Dim; ++d) {
+                iVec[d] = iVec[d] - nghost + lDom[d].first();
+            }
             Vector<double, 3> kVec;
             double Dr = 0.0;
             for(size_t d = 0; d < Dim; ++d) {
-                kVec[d] = 2 * pi / Len[d] * (iVec[d] - (N[d] / 2));
+                //kVec[d] = 2 * pi / Len[d] * (iVec[d] - (N[d] / 2));
+                bool shift            = (iVec[d] > (N[d] / 2));
+                kVec[d]               = 2 * pi / Len[d] * (iVec[d] - shift * N[d]);
                 Dr += kVec[d] * kVec[d];
             }
 
             Kokkos::complex<double> Ek = {0.0, 0.0}; 
             double myVal = 0.0;
-            auto rho = rhoview(i+nghost,j+nghost,k+nghost);
+            auto rho = rhoview(i,j,k);
             for(size_t d = 0; d < Dim; ++d) {
                 bool isNotZero = (Dr != 0.0);
                 double factor = isNotZero * (1.0 / (Dr + ((!isNotZero) * 1.0))); 
@@ -362,8 +385,10 @@ public:
 
         }, Kokkos::Sum<double>(temp));
 
+        double globaltemp = 0.0;
+        layout.comm.reduce(temp, globaltemp, 1, std::plus<double>(), 0);
         double volume = (rmax_m[0] - rmin_m[0]) * (rmax_m[1] - rmin_m[1]) * (rmax_m[2] - rmin_m[2]);
-        potentialEnergy = 0.5 * temp * volume;
+        potentialEnergy = 0.5 * globaltemp * volume;
 
         auto Pview = Ptemp.getView();
         auto qView = q.getView();
@@ -379,64 +404,64 @@ public:
 
         temp *= 0.5;
         double globaltemp = 0.0;
-        MPI_Allreduce(&temp, &globaltemp, 1, MPI_DOUBLE, MPI_SUM, spaceComm);
+        spaceComm.reduce(temp, globaltemp, 1, std::plus<double>());
 
         kineticEnergy = globaltemp;
 
-        auto rhoPIFhalfview = rhoPIFhalf_m.getView();
-        const int nghostHalf = rhoPIFhalf_m.getNghost();
+        //auto rhoPIFhalfview = rhoPIFhalf_m.getView();
+        //const int nghostHalf = rhoPIFhalf_m.getNghost();
       
-        const FieldLayout_t& layoutHalf = rhoPIFhalf_m.getLayout(); 
-        const auto& domainHalf = layoutHalf.getDomain();
+        //const FieldLayout_t& layoutHalf = rhoPIFhalf_m.getLayout(); 
+        //const auto& domainHalf = layoutHalf.getDomain();
 
-        Vector<int, Dim> Nhalf;
-        for (unsigned d=0; d < Dim; ++d) {
-            Nhalf[d] = domainHalf[d].length();
-        }
+        //Vector<int, Dim> Nhalf;
+        //for (unsigned d=0; d < Dim; ++d) {
+        //    Nhalf[d] = domainHalf[d].length();
+        //}
 
-        //Heffte needs FFTshifted field whereas the field from cuFINUFFT
-        //is not shifted. Hence, here we do the shift. 
-        Kokkos::parallel_for("Transfer complex rho to half domain",
-                              mdrange_type({0, 0, 0},
-                                           {Nhalf[0],
-                                            Nhalf[1],
-                                            Nhalf[2]}),
-                              KOKKOS_LAMBDA(const int i,
-                                            const int j,
-                                            const int k)
-        {
-            Vector<int, 3> iVec = {i, j, k};
-            int shift;
-            for(size_t d = 0; d < Dim; ++d) {
-                bool isLessThanHalf = (iVec[d] < (Nhalf[d]/2));
-                shift = ((int)isLessThanHalf * 2) - 1;
-                iVec[d] = (iVec[d] + shift * (Nhalf[d]/2)) + nghostHalf;
-            }
-            rhoPIFhalfview(Nhalf[0]-1-i+nghostHalf, iVec[1], iVec[2]) = 
-            rhoview(i+nghostHalf,j+nghostHalf,k+nghostHalf);
-        });
+        ////Heffte needs FFTshifted field whereas the field from cuFINUFFT
+        ////is not shifted. Hence, here we do the shift. 
+        //Kokkos::parallel_for("Transfer complex rho to half domain",
+        //                      mdrange_type({0, 0, 0},
+        //                                   {Nhalf[0],
+        //                                    Nhalf[1],
+        //                                    Nhalf[2]}),
+        //                      KOKKOS_LAMBDA(const int i,
+        //                                    const int j,
+        //                                    const int k)
+        //{
+        //    Vector<int, 3> iVec = {i, j, k};
+        //    int shift;
+        //    for(size_t d = 0; d < Dim; ++d) {
+        //        bool isLessThanHalf = (iVec[d] < (Nhalf[d]/2));
+        //        shift = ((int)isLessThanHalf * 2) - 1;
+        //        iVec[d] = (iVec[d] + shift * (Nhalf[d]/2)) + nghostHalf;
+        //    }
+        //    rhoPIFhalfview(Nhalf[0]-1-i+nghostHalf, iVec[1], iVec[2]) = 
+        //    rhoview(i+nghostHalf,j+nghostHalf,k+nghostHalf);
+        //});
 
 
-        rhoPIFreal_m = 0.0;
-        fft_mp->transform(-1, rhoPIFreal_m, rhoPIFhalf_m);
+        //rhoPIFreal_m = 0.0;
+        //fft_mp->transform(-1, rhoPIFreal_m, rhoPIFhalf_m);
 
-        rhoPIFreal_m = (1.0/(N[0]*N[1]*N[2])) * volume * rhoPIFreal_m;
-        auto rhoPIFrealview = rhoPIFreal_m.getView();
-        temp = 0.0;
-        Kokkos::parallel_reduce("Rho real sum",
-                              mdrange_type({0, 0, 0},
-                                           {N[0],
-                                            N[1],
-                                            N[2]}),
-                              KOKKOS_LAMBDA(const int i,
-                                            const int j,
-                                            const int k,
-                                            double& valL)
-        {
-            valL += rhoPIFrealview(i+nghost, j+nghost, k+nghost);
-        }, Kokkos::Sum<double>(temp));
+        //rhoPIFreal_m = (1.0/(N[0]*N[1]*N[2])) * volume * rhoPIFreal_m;
+        //auto rhoPIFrealview = rhoPIFreal_m.getView();
+        //temp = 0.0;
+        //Kokkos::parallel_reduce("Rho real sum",
+        //                      mdrange_type({0, 0, 0},
+        //                                   {N[0],
+        //                                    N[1],
+        //                                    N[2]}),
+        //                      KOKKOS_LAMBDA(const int i,
+        //                                    const int j,
+        //                                    const int k,
+        //                                    double& valL)
+        //{
+        //    valL += rhoPIFrealview(i+nghost, j+nghost, k+nghost);
+        //}, Kokkos::Sum<double>(temp));
 
-        double chargeTotal = temp;
+        //double chargeTotal = temp;
 
         Vector_t totalMomentum = 0.0;
         
@@ -453,7 +478,7 @@ public:
 
         double magMomentum = 0.0;
         for(size_t d = 0; d < Dim; ++d) {
-            MPI_Allreduce(&totalMomentum[d], &globalMom[d], 1, MPI_DOUBLE, MPI_SUM, spaceComm);
+            spaceComm.reduce(totalMomentum[d], globalMom[d], 1, std::plus<double>());
             magMomentum += globalMom[d] * globalMom[d];
         }
 
@@ -470,7 +495,7 @@ public:
             fname << ".csv";
 
 
-            Inform csvout(NULL, fname.str().c_str(), Inform::APPEND, Ippl::Comm->rank());
+            Inform csvout(NULL, fname.str().c_str(), Inform::APPEND, ippl::Comm->rank());
             csvout.precision(17);
             csvout.setf(std::ios::scientific, std::ios::floatfield);
 
@@ -480,7 +505,6 @@ public:
                    << potentialEnergy << " "
                    << kineticEnergy << " "
                    << potentialEnergy + kineticEnergy << " " 
-                   << chargeTotal << " " 
                    << magMomentum << endl;
         }
 
@@ -496,7 +520,7 @@ public:
             fname << nc;
             fname << ".csv";
 
-            Inform csvout(NULL, fname.str().c_str(), Inform::APPEND, Ippl::Comm->rank());
+            Inform csvout(NULL, fname.str().c_str(), Inform::APPEND, ippl::Comm->rank());
             csvout.precision(17);
             csvout.setf(std::ios::scientific, std::ios::floatfield);
 
@@ -511,7 +535,7 @@ public:
 
     }
 
-    void initializeShapeFunctionPIF() {
+    void initializeShapeFunctionPIF(const std::string& output_type) {
 
         using mdrange_type = Kokkos::MDRangePolicy<Kokkos::Rank<3>>;
         auto Skview = Sk_m.getView();
@@ -522,6 +546,14 @@ public:
         const Vector_t& Len = rmax_m - rmin_m;
         const double pi = std::acos(-1.0);
         int order = shapedegree_m + 1;
+        const FieldLayout_t& layout = Sk_m.getLayout();
+        const auto& lDom   = layout.getLocalNDIndex();
+        Vector_t dxShape;
+        if(output_type == "--use-upsampled") {
+            for (size_t d = 0; d < Dim; ++d) {
+                dxShape[d] = 2.0 * dx[d];
+            }
+        }
         
         if(shapetype_m == "Gaussian") {
 
@@ -532,19 +564,28 @@ public:
         else if(shapetype_m == "B-spline") {
 
             Kokkos::parallel_for("B-spline shape functions",
-                                mdrange_type({0, 0, 0},
-                                             {N[0], N[1], N[2]}),
+                                mdrange_type({nghost, 
+			                                  nghost, 
+							                  nghost}, 
+							                  {Skview.extent(0) - nghost, 
+							                   Skview.extent(1) - nghost, 
+							                   Skview.extent(2) - nghost}),
                                 KOKKOS_LAMBDA(const int i,
                                               const int j,
                                               const int k)
             {
                 
                 Vector<int, 3> iVec = {i, j, k};
+                for (unsigned d = 0; d < Dim; ++d) {
+                    iVec[d] = iVec[d] - nghost + lDom[d].first();
+                }
                 Vector<double, 3> kVec;
                 double Sk = 1.0;
                 for(size_t d = 0; d < Dim; ++d) {
-                    kVec[d] = 2 * pi / Len[d] * (iVec[d] - (N[d] / 2));
-                    double khbytwo = kVec[d] * dx[d] / 2;
+                    //kVec[d] = 2 * pi / Len[d] * (iVec[d] - (N[d] / 2));
+                    bool shift            = (iVec[d] > (N[d] / 2));
+                    kVec[d]               = 2 * pi / Len[d] * (iVec[d] - shift * N[d]);
+                    double khbytwo = kVec[d] * dxShape[d] / 2;
                     bool isNotZero = (khbytwo != 0.0);
                     double factor = (1.0 / (khbytwo + ((!isNotZero) * 1.0)));
                     double arg = isNotZero * (Kokkos::sin(khbytwo) * factor) + 
@@ -552,7 +593,7 @@ public:
                     //Fourier transform of CIC
                     Sk *= std::pow(arg, order);
                 }
-                    Skview(i+nghost, j+nghost, k+nghost) = Sk;
+                    Skview(i, j, k) = Sk;
             });
         }
         else {

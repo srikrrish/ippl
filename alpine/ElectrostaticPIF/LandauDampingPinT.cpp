@@ -666,9 +666,11 @@ int main(int argc, char *argv[]){
                 << " Perror: " << Perror
                 << endl;
 
-            //IpplTimings::startTimer(dumpData);
-            //Pcoarse->writelocalError(Rerror, Perror, nc+1, it+1, rankTime, rankSpace);
-            //IpplTimings::stopTimer(dumpData);
+            if((parallel_strategy == "to") || (parallel_strategy == "st") {
+                IpplTimings::startTimer(dumpData);
+                Pcoarse->writelocalError(Rerror, Perror, nc+1, it+1, rankTime, rankSpace);
+                IpplTimings::stopTimer(dumpData);
+            }
 
             //MPI_Barrier(spaceComm);
             

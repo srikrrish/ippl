@@ -26,7 +26,7 @@ using Centering_t = Mesh_t::DefaultCentering;
 
 // some typedefs
 typedef ippl::ParticleSpatialLayout<double, Dim> PLayout_t;
-typedef ippl::UniformCartesian<double, Dim> Mesh_t;
+//typedef ippl::UniformCartesian<double, Dim> Mesh_t;
 typedef ippl::FieldLayout<Dim> FieldLayout_t;
 
 using size_type = ippl::detail::size_type;
