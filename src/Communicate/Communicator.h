@@ -49,7 +49,8 @@ namespace ippl {
             void barrier() { MPI_Barrier(*comm_m); }
 
             void abort(int errorcode = -1) { MPI_Abort(*comm_m, errorcode); }
-
+            
+            //free() function for freeing owned MPI subcommunicators
             void free() noexcept {
                 if (!comm_m) return;
             
@@ -185,7 +186,9 @@ namespace ippl {
 
                 buffer.deserialize(ar, nrecvs);
             }
-            
+           
+            //recvDirect can be used in cases when there is no need to pack/unpack to an intermediate
+            //buffer  
             template <class Buffer, typename Archive>
             void recvDirect(int src, int tag, Buffer& buffer, Archive& ar, size_type msize,
                       size_type nrecvs) {
@@ -213,6 +216,8 @@ namespace ippl {
                 MPI_Isend(ar.getBuffer(), ar.getSize(), MPI_BYTE, dest, tag, *comm_m, &request);
             }
 
+            //isendDirect can be used in cases when there is no need to pack/unpack to an intermediate
+            //buffer  
             template <class Buffer, typename Archive>
             void isendDirect(int dest, int tag, Buffer& buffer, Archive& ar, MPI_Request& request,
                        size_type nsends) {

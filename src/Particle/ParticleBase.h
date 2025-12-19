@@ -328,14 +328,14 @@ namespace ippl {
         void deserialize(Archive& ar, size_type nrecvs);
 
         /*!
-         * Serialize to do MPI calls.
+         * Serialize without buffer to do MPI calls.
          * @param ar archive
          */
         template <typename Archive>
         void serializeWithoutBuffer(Archive& ar, size_type nsends);
 
         /*!
-         * Deserialize to do MPI calls.
+         * Deserialize without buffer to do MPI calls.
          * @param ar archive
          */
         template <typename Archive>
