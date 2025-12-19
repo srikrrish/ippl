@@ -227,24 +227,16 @@ int main(int argc, char *argv[]){
     ippl::initialize(argc, argv);
     { 
     int spaceColor, timeColor;
-    //MPI_Comm spaceComm, timeComm;
 
     int spaceProcs = std::atoi(argv[15]);
-    //int timeProcs = std::atoi(argv[16]);
     spaceColor = ippl::Comm->rank() / spaceProcs; 
     timeColor = ippl::Comm->rank() % spaceProcs;
 
-    //MPI_Comm_split(Ippl::getComm(), spaceColor, Ippl::Comm->rank(), &spaceComm);
-    //MPI_Comm_split(Ippl::getComm(), timeColor, Ippl::Comm->rank(), &timeComm);
     ippl::mpi::Communicator spaceComm = ippl::Comm->split(spaceColor, ippl::Comm->rank());
     ippl::mpi::Communicator timeComm = ippl::Comm->split(timeColor, ippl::Comm->rank());
 
     int rankSpace, sizeSpace, rankTime, sizeTime;
-    //MPI_Comm_rank(spaceComm, &rankSpace);
-    //MPI_Comm_size(spaceComm, &sizeSpace);
 
-    //MPI_Comm_rank(timeComm, &rankTime);
-    //MPI_Comm_size(timeComm, &sizeTime);
     rankSpace = spaceComm.rank();
     sizeSpace = spaceComm.size();
     rankTime = timeComm.rank();
@@ -288,7 +280,6 @@ int main(int argc, char *argv[]){
     const unsigned int ntFine = std::ceil(dtSlice / dtFine);
     const unsigned int ntCoarse = std::ceil(dtSlice / dtCoarse);
     const double tol = std::atof(argv[11]);
-    //const std::string parallel_strategy = argv[20];
     const std::string output_type = argv[20];
 
 
@@ -313,15 +304,7 @@ int main(int argc, char *argv[]){
     }
 
     std::array<bool, Dim> isParallel;  // Specifies SERIAL, PARALLEL dims
-	//if(parallel_strategy == "dd") {
-    //   	isParallel.fill(true);
-	//}
-	//else {
-    //    //For parallel strategy 'pd' (particle decomp), 
-    //    //'st' (space-time) or to (time only) put spatial 
-    //    //mode parallelism to false
-       	isParallel.fill(false);
-	//}
+    isParallel.fill(false);
 
     // create mesh and layout objects for this problem domain
     Vector_t kw = {0.5, 0.5, 0.5};
@@ -345,12 +328,9 @@ int main(int argc, char *argv[]){
     Mesh_t meshPIF(domainPIF, hrPIF, origin);
     Mesh_t meshPIFOrig(domainPIFOrig, hrPIFOrig, origin);
     std::unique_ptr<ippl::mpi::Communicator> comm_landau = 0;
-	//if(parallel_strategy == "dd") {
-    //    comm_landau = std::make_unique<ippl::mpi::Communicator>(*ippl::Comm);
-	//}
-	//else { //pd, st or to
-        comm_landau = std::make_unique<ippl::mpi::Communicator>(MPI_COMM_SELF);
-	//}
+    
+    comm_landau = std::make_unique<ippl::mpi::Communicator>(MPI_COMM_SELF);
+    
     FieldLayout_t FLPIC(*comm_landau, domainPIC, isParallel, isAllPeriodic);
     FieldLayout_t FLPIF(*comm_landau, domainPIF, isParallel, isAllPeriodic);
     FieldLayout_t FLPIFOrig(*comm_landau, domainPIFOrig, isParallel, isAllPeriodic);
@@ -363,22 +343,11 @@ int main(int argc, char *argv[]){
     int myRank    = ippl::Comm->rank();
     double factor = 1;
     for (unsigned d = 0; d < Dim; ++d) {
-        //if(parallel_strategy == "dd") {
-        //    Nr[d] = CDF(Regions(myRank)[d].max(), alpha, kw[d])
-        //            - CDF(Regions(myRank)[d].min(), alpha, kw[d]);
-        //    Dr[d]   = CDF(rmax[d], alpha, kw[d]) - CDF(rmin[d], alpha, kw[d]);
-        //    minU[d] = CDF(Regions(myRank)[d].min(), alpha, kw[d]);
-        //    maxU[d] = CDF(Regions(myRank)[d].max(), alpha, kw[d]);
-        //    factor *= Nr[d] / Dr[d];
-        //}
-        //else { 
-            minU[d] = CDF(rmin[d], alpha[d], kw[d]);
-            maxU[d] = CDF(rmax[d], alpha[d], kw[d]);
-        //}
+        minU[d] = CDF(rmin[d], alpha[d], kw[d]);
+        maxU[d] = CDF(rmax[d], alpha[d], kw[d]);
     }
-    //if(parallel_strategy == "pd") { 
+    
     factor = 1.0 / sizeSpace;
-    //} 
 
     size_type nloc = (size_type)(factor * totalP);
 
@@ -469,7 +438,7 @@ int main(int argc, char *argv[]){
     
     double coarseTol = std::atof(argv[17]);
     double fineTol   = std::atof(argv[18]);
-    Pcoarse->initNUFFTs(FLPIF, coarseTol, fineTol, output_type);
+    Pcoarse->initNUFFTs(FLPIFOrig, coarseTol, fineTol, output_type);
     std::string coarse = "Coarse";
     std::string fine = "Fine";
 
@@ -483,7 +452,7 @@ int main(int argc, char *argv[]){
     //For some reason using the next_tag with multiple cycles is not 
     //working so we use static tags here
     tag = 500;//Ippl::Comm->next_tag(IPPL_PARAREAL_APP, IPPL_APP_CYCLE);
-
+    msg << "Before particle creation" << endl; 
     if(rankTime == 0) {
         Kokkos::Random_XorShift64_Pool<> rand_pool64((size_type)(42 + 100*rankSpace));
         Kokkos::parallel_for(nloc,
@@ -496,7 +465,7 @@ int main(int argc, char *argv[]){
     else {
         size_type bufSize = Pbegin->packedSize<MemorySpace>(nloc);
         auto buf = ippl::Comm->getBuffer<MemorySpace>(bufSize);
-        timeComm.recv(rankTime-1, tag, *Pbegin, *buf, bufSize, nloc);
+        timeComm.recvDirect(rankTime-1, tag, *Pbegin, *buf, bufSize, nloc);
         buf->resetReadPos();
     }
     IpplTimings::stopTimer(timeCommunication);
@@ -528,10 +497,11 @@ int main(int argc, char *argv[]){
         size_type bufSize = Pend->packedSize<MemorySpace>(nloc);
         auto buf = ippl::Comm->getBuffer<MemorySpace>(bufSize);
         MPI_Request request;
-        timeComm.isend(rankTime+1, tag, *Pend, *buf, request, nloc);
+        timeComm.isendDirect(rankTime+1, tag, *Pend, *buf, request, nloc);
         buf->resetWritePos();
         MPI_Wait(&request, MPI_STATUS_IGNORE);
     }
+    ippl::Comm->freeAllBuffers();
     IpplTimings::stopTimer(timeCommunication);
 
     msg << "Parareal "
@@ -608,10 +578,10 @@ int main(int argc, char *argv[]){
             if(recvCriteria && (!isPreviousDomainConverged)) {
                 size_type bufSize = Pbegin->packedSize<MemorySpace>(nloc);
                 auto buf = ippl::Comm->getBuffer<MemorySpace>(bufSize);
-                timeComm.recv(rankTime-sign, tag, *Pbegin, *buf, bufSize, nloc);
+                timeComm.recvDirect(rankTime-sign, tag, *Pbegin, *buf, bufSize, nloc);
                 buf->resetReadPos();
-                ippl::mpi::Status status;
-                timeComm.recv(&isPreviousDomainConverged, 1, rankTime-sign, tagbool, status);
+                MPI_Recv(&isPreviousDomainConverged, 1, MPI_C_BOOL, rankTime-sign, tagbool, 
+                        timeComm.getCommunicator(), MPI_STATUS_IGNORE);
                 IpplTimings::startTimer(deepCopy);
                 Kokkos::deep_copy(Pcoarse->R0.getView(), Pbegin->R.getView());
                 Kokkos::deep_copy(Pcoarse->P0.getView(), Pbegin->P.getView());
@@ -655,12 +625,13 @@ int main(int argc, char *argv[]){
                 size_type bufSize = Pend->packedSize<MemorySpace>(nloc);
                 auto buf = ippl::Comm->getBuffer<MemorySpace>(bufSize);
                 MPI_Request request;
-                timeComm.isend(rankTime+sign, tag, *Pend, *buf, request, nloc);
+                timeComm.isendDirect(rankTime+sign, tag, *Pend, *buf, request, nloc);
                 buf->resetWritePos();
                 MPI_Wait(&request, MPI_STATUS_IGNORE);
-                timeComm.send(&isConverged, 1, rankTime+sign, tagbool);
+                MPI_Send(&isConverged, 1, MPI_C_BOOL, rankTime+sign, tagbool, timeComm.getCommunicator());
             }
             IpplTimings::stopTimer(timeCommunication);
+            ippl::Comm->freeAllBuffers();
             
             
             msg << "Finished iteration: " << it+1 
@@ -669,11 +640,9 @@ int main(int argc, char *argv[]){
                 << " Perror: " << Perror
                 << endl;
 
-            //if((parallel_strategy == "to") || (parallel_strategy == "st") {
-                IpplTimings::startTimer(dumpData);
-                Pcoarse->writelocalError(Rerror, Perror, nc+1, it+1, rankTime, rankSpace);
-                IpplTimings::stopTimer(dumpData);
-            //}
+            IpplTimings::startTimer(dumpData);
+            Pcoarse->writelocalError(Rerror, Perror, nc+1, it+1, rankTime, rankSpace);
+            IpplTimings::stopTimer(dumpData);
 
             //MPI_Barrier(spaceComm);
             
@@ -707,7 +676,7 @@ int main(int argc, char *argv[]){
             if(recvCriteria) {
                 size_type bufSize = Pbegin->packedSize<MemorySpace>(nloc);
                 auto buf = ippl::Comm->getBuffer<MemorySpace>(bufSize);
-                timeComm.recv(rankTime+sign, tag, *Pbegin, *buf, bufSize, nloc);
+                timeComm.recvDirect(rankTime+sign, tag, *Pbegin, *buf, bufSize, nloc);
                 buf->resetReadPos();
             }
             IpplTimings::stopTimer(timeCommunication);
@@ -739,10 +708,11 @@ int main(int argc, char *argv[]){
                 size_type bufSize = Pend->packedSize<MemorySpace>(nloc);
                 auto buf = ippl::Comm->getBuffer<MemorySpace>(bufSize);
                 MPI_Request request;
-                timeComm.isend(rankTime-sign, tag, *Pend, *buf, request, nloc);
+                timeComm.isendDirect(rankTime-sign, tag, *Pend, *buf, request, nloc);
                 buf->resetWritePos();
                 MPI_Wait(&request, MPI_STATUS_IGNORE);
             }
+            ippl::Comm->freeAllBuffers();
             IpplTimings::stopTimer(timeCommunication);
             sign *= -1;
         }
@@ -753,13 +723,10 @@ int main(int argc, char *argv[]){
     IpplTimings::print();
     IpplTimings::print(std::string("timing.dat"));
 
-    //MPI_Comm_free(&spaceComm.getCommunicator());
-    //MPI_Comm_free(&timeComm.getCommunicator());
     spaceComm.free();
     timeComm.free();
     }
     ippl::finalize();
-    //Ippl::Comm->finalize();
 
 
     return 0;

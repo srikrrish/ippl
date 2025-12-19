@@ -185,6 +185,22 @@ namespace ippl {
 
                 buffer.deserialize(ar, nrecvs);
             }
+            
+            template <class Buffer, typename Archive>
+            void recvDirect(int src, int tag, Buffer& buffer, Archive& ar, size_type msize,
+                      size_type nrecvs) {
+                // Temporary fix. MPI communication seems to have problems when the
+                // count argument exceeds the range of int, so large messages should
+                // be split into smaller messages
+                if (msize > INT_MAX) {
+                    std::cerr << "Message size exceeds range of int" << std::endl;
+                    this->abort();
+                }
+                MPI_Status status;
+                MPI_Recv(ar.getBuffer(), msize, MPI_BYTE, src, tag, *comm_m, &status);
+
+                buffer.deserializeWithoutBuffer(ar, nrecvs);
+            }
 
             template <class Buffer, typename Archive>
             void isend(int dest, int tag, Buffer& buffer, Archive& ar, MPI_Request& request,
@@ -194,6 +210,17 @@ namespace ippl {
                     this->abort();
                 }
                 buffer.serialize(ar, nsends);
+                MPI_Isend(ar.getBuffer(), ar.getSize(), MPI_BYTE, dest, tag, *comm_m, &request);
+            }
+
+            template <class Buffer, typename Archive>
+            void isendDirect(int dest, int tag, Buffer& buffer, Archive& ar, MPI_Request& request,
+                       size_type nsends) {
+                if (ar.getSize() > INT_MAX) {
+                    std::cerr << "Message size exceeds range of int" << std::endl;
+                    this->abort();
+                }
+                buffer.serializeWithoutBuffer(ar, nsends);
                 MPI_Isend(ar.getBuffer(), ar.getSize(), MPI_BYTE, dest, tag, *comm_m, &request);
             }
 

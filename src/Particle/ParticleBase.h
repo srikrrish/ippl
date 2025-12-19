@@ -328,6 +328,21 @@ namespace ippl {
         void deserialize(Archive& ar, size_type nrecvs);
 
         /*!
+         * Serialize to do MPI calls.
+         * @param ar archive
+         */
+        template <typename Archive>
+        void serializeWithoutBuffer(Archive& ar, size_type nsends);
+
+        /*!
+         * Deserialize to do MPI calls.
+         * @param ar archive
+         */
+        template <typename Archive>
+        void deserializeWithoutBuffer(Archive& ar, size_type nrecvs);
+
+
+        /*!
          * Determine the total space necessary to store a certain number of particles
          * @tparam MemorySpace only consider attributes stored in this memory space
          * @param count particle number

@@ -327,6 +327,25 @@ namespace ippl {
     }
 
     template <class PLayout, typename... IP>
+    template <typename Archive>
+    void ParticleBase<PLayout, IP...>::serializeWithoutBuffer(Archive& ar, size_type nsends) {
+        using memory_space = typename Archive::buffer_type::memory_space;
+        forAllAttributes<memory_space>([&]<typename Attribute>(Attribute& att) {
+            att->serializeWithoutBuffer(ar, nsends);
+        });
+    }
+
+    template <class PLayout, typename... IP>
+    template <typename Archive>
+    void ParticleBase<PLayout, IP...>::deserializeWithoutBuffer(Archive& ar, size_type nrecvs) {
+        using memory_space = typename Archive::buffer_type::memory_space;
+        forAllAttributes<memory_space>([&]<typename Attribute>(Attribute& att) {
+            att->deserializeWithoutBuffer(ar, nrecvs);
+        });
+    }
+
+
+    template <class PLayout, typename... IP>
     template <typename MemorySpace>
     detail::size_type ParticleBase<PLayout, IP...>::packedSize(const size_type count) const {
         size_type total = 0;

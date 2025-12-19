@@ -292,10 +292,6 @@ public:
         
 
         Kokkos::fence();
-	    double globalfieldEnergy = 0.0;
-    	double globalEzAmp = 0.0;
-        layout.comm.reduce(fieldEnergy, globalfieldEnergy, 1, std::plus<double>(), 0);
-        layout.comm.reduce(EzAmp, globalEzAmp, 1, std::greater<double>(), 0);
         double volume = (rmax_m[0] - rmin_m[0]) * (rmax_m[1] - rmin_m[1]) * (rmax_m[2] - rmin_m[2]);
         fieldEnergy *= volume;
 
@@ -317,8 +313,8 @@ public:
 
 
             csvout << time_m << " "
-                   << globalfieldEnergy << " "
-                   << globalEzAmp << endl;
+                   << fieldEnergy << " "
+                   << EzAmp << endl;
         }
     }
 
@@ -386,10 +382,8 @@ public:
 
         }, Kokkos::Sum<double>(temp));
 
-        double globaltemp = 0.0;
-        layout.comm.reduce(temp, globaltemp, 1, std::plus<double>(), 0);
         double volume = (rmax_m[0] - rmin_m[0]) * (rmax_m[1] - rmin_m[1]) * (rmax_m[2] - rmin_m[2]);
-        potentialEnergy = 0.5 * globaltemp * volume;
+        potentialEnergy = 0.5 * temp * volume;
 
         auto Pview = Ptemp.getView();
         auto qView = q.getView();
@@ -404,8 +398,8 @@ public:
                                 }, Kokkos::Sum<double>(temp));
 
         temp *= 0.5;
-        globaltemp = 0.0;
-        spaceComm.reduce(temp, globaltemp, 1, std::plus<double>());
+        double globaltemp = 0.0;
+        spaceComm.allreduce(temp, globaltemp, 1, std::plus<double>());
 
         kineticEnergy = globaltemp;
 
@@ -479,7 +473,7 @@ public:
 
         double magMomentum = 0.0;
         for(size_t d = 0; d < Dim; ++d) {
-            spaceComm.reduce(totalMomentum[d], globalMom[d], 1, std::plus<double>());
+            spaceComm.allreduce(totalMomentum[d], globalMom[d], 1, std::plus<double>());
             magMomentum += globalMom[d] * globalMom[d];
         }
 

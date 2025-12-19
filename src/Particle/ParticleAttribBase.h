@@ -56,6 +56,10 @@ namespace ippl {
 
             virtual void deserialize(Archive<memory_space>& ar, size_type nrecvs) = 0;
 
+            virtual void serializeWithoutBuffer(Archive<memory_space>& ar, size_type nsends) = 0;
+
+            virtual void deserializeWithoutBuffer(Archive<memory_space>& ar, size_type nrecvs) = 0;
+            
             virtual size_type size() const = 0;
 
             KOKKOS_INLINE_FUNCTION virtual ~ParticleAttribBase() = default;

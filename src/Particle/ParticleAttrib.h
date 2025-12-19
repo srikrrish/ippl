@@ -68,7 +68,7 @@ namespace ippl {
 
         void unpack(size_type) override;
 
-        void serialize(detail::Archive<memory_space>& ar, size_type nsends) override {
+        void serialize(detail::Archive<memory_space>& ar, size_type nsends) override        {
             ar.serialize(buf_m, nsends);
         }
 
@@ -76,6 +76,13 @@ namespace ippl {
             ar.deserialize(buf_m, nrecvs);
         }
 
+        void serializeWithoutBuffer(detail::Archive<memory_space>& ar, size_type nsends) override {
+            ar.serialize(dview_m, nsends);
+        }
+
+        void deserializeWithoutBuffer(detail::Archive<memory_space>& ar, size_type nrecvs) override {
+            ar.deserialize(dview_m, nrecvs);
+        }
         KOKKOS_INLINE_FUNCTION virtual ~ParticleAttrib() = default;
 
         size_type size() const override { return dview_m.extent(0); }
