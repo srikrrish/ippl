@@ -1,6 +1,7 @@
 // Electrostatic Landau damping test with Particle-in-Fourier schemes
 //   Usage:
-//     srun ./LandauDampingPIF <nx> <ny> <nz> <Np> <Nt> <dt> <ShapeType> <degree> <tol> --info 5
+//     srun ./LandauDampingPIF <nx> <ny> <nz> <Np> <Nt> <dt> <ShapeType> <degree> <tol>
+//          <parallel strategy> <output type> --info 5
 //     nx       = No. of Fourier modes in the x-direction
 //     ny       = No. of Fourier modes in the y-direction
 //     nz       = No. of Fourier modes in the z-direction
@@ -10,8 +11,10 @@
 //     ShapeType = Shape function type B-spline only for the moment
 //     degree = B-spline degree (-1 for delta function)
 //     tol = tolerance of NUFFT
+//     parallel strategy = pd or dd (particle decomposition or domain decomposition)
+//     output type  = upsampled or pruned for NUFFTs
 //     Example:
-//     srun ./LandauDampingPIF 32 32 32 655360 20 0.05 B-spline 1 1e-4 --info 5
+//     srun ./LandauDampingPIF 32 32 32 655360 20 0.05 B-spline 1 1e-4 dd --use-pruned --info 5
 //
 // Copyright (c) 2022, Sriramkrishnan Muralikrishnan,
 // Jülich Supercomputing Centre, Jülich, Germany.
@@ -166,13 +169,6 @@ int main(int argc, char* argv[]) {
     	const std::string parallel_strategy = argv[10];
     	const std::string output_type = argv[11];
 
-        //double factor             = 1.0 / ippl::Comm->size();
-        //size_type nloc            = (size_type)(factor * totalP);
-        //size_type Total_particles = 0;
-
-        //MPI_Allreduce(&nloc, &Total_particles, 1, MPI_UNSIGNED_LONG, MPI_SUM, ippl::Comm->getCommunicator());
-
-        msg << "Read arguments " << endl;
         using bunch_type = ChargedParticlesPIF<PLayout_t>;
 
         std::unique_ptr<bunch_type> P;
@@ -217,7 +213,6 @@ int main(int argc, char* argv[]) {
         Vector_t hr     = {dx, dy, dz};
         Vector_t hrOrig     = {dxOrig, dyOrig, dzOrig};
         Vector_t origin = {rmin[0], rmin[1], rmin[2]};
-        msg << "Setup parameters " << endl;
 
         const bool isAllPeriodic = true;
         Mesh_t mesh(domain, hr, origin);
@@ -235,7 +230,6 @@ int main(int argc, char* argv[]) {
 
         PLayout_t PL(FLOrig, meshOrig);
 
-        msg << "Setup all layouts " << endl;
 
         ////////////////////////////////////////////////////////////
         // Initialize an FFT object for getting rho in real space and
@@ -279,7 +273,6 @@ int main(int argc, char* argv[]) {
         ////////////////////////////////////////////////////////////
 
 
-        msg << "Before particles creation " << endl;
         IpplTimings::startTimer(particleCreation);
 
 	    typedef ippl::detail::RegionLayout<double, Dim, Mesh_t>::uniform_type RegionLayout_t;
@@ -330,7 +323,6 @@ int main(int argc, char* argv[]) {
         P->shapedegree_m = std::atoi(argv[8]);
 
         P->rho_m.initialize(mesh, FL);
-        P->rhoDFT_m.initialize(mesh, FL);
         P->Sk_m.initialize(mesh, FL);
 
         P->create(nloc);
@@ -352,20 +344,15 @@ int main(int argc, char* argv[]) {
         IpplTimings::startTimer(initializeShapeFunctionPIF);
         P->initializeShapeFunctionPIF(output_type);
         IpplTimings::stopTimer(initializeShapeFunctionPIF);
-        msg << "After init shape function " << endl;
 
         double tol = std::atof(argv[9]);
         P->initNUFFT(FLOrig, tol, output_type);
-        msg << "After init NUFFT " << endl;
 	    if(parallel_strategy == "dd") {
 		    P->update();
 	    }
-        msg << "After update " << endl;
         P->scatter();
-        msg << "After scatter " << endl;
 
         P->gather();
-        msg << "After gather " << endl;
 
         IpplTimings::startTimer(dumpDataTimer);
         P->dumpBumponTail();

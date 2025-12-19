@@ -1,6 +1,7 @@
 // Electrostatic Penning trap test with Particle-in-Fourier schemes
 //   Usage:
-//     srun ./PenningTrapPIF <nx> <ny> <nz> <Np> <Nt> <dt> <ShapeType> <degree> <tol> --info 5
+//     srun ./PenningTrapPIF <nx> <ny> <nz> <Np> <Nt> <dt> <ShapeType> <degree> <tol> 
+//          <parallel strategy> <output type> --info 5
 //     nx       = No. of Fourier modes in the x-direction
 //     ny       = No. of Fourier modes in the y-direction
 //     nz       = No. of Fourier modes in the z-direction
@@ -10,8 +11,10 @@
 //     ShapeType = Shape function type B-spline only for the moment
 //     degree = B-spline degree (-1 for delta function)
 //     tol = tolerance of NUFFT
+//     parallel strategy = pd or dd (particle decomposition or domain decomposition)
+//     output type  = upsampled or pruned for NUFFTs
 //     Example:
-//     srun ./PenningTrapPIF 32 32 32 655360 20 0.05 B-spline 1 1e-4 --info 5
+//     srun ./PenningTrapPIF 32 32 32 655360 20 0.05 B-spline 1 1e-4 pd --use-upsampled --info 5
 //
 // Copyright (c) 2023, Sriramkrishnan Muralikrishnan,
 // Jülich Supercomputing Centre, Jülich, Germany.
@@ -41,9 +44,6 @@
 
 #include "ChargedParticlesPIF.hpp"
 
-#ifdef ENABLE_CATALYST
-#include "CatalystAdaptor.h"
-#endif
 
 template <typename T>
 struct Newton1D {
@@ -138,21 +138,11 @@ const char* TestName = "PenningTrapPIF";
 int main(int argc, char* argv[]) {
     ippl::initialize(argc, argv);
     {
-#ifdef ENABLE_CATALYST
-        char* script = nullptr;
-        for (int i = 1; i < argc; ++i) {
-            if (std::string(argv[i]) == "--pvscript" && i + 1 < argc) {
-                script = argv[i + 1];
-                i++;
-            }
-        }
-        char* reducedArgv[] = {argv[0], script};
-        CatalystAdaptor::Initialize(2, reducedArgv);
-#endif
         Inform msg(TestName);
         Inform msg2all(TestName, INFORM_ALL_NODES);
 
         ippl::Vector<int, Dim> nr = {std::atoi(argv[1]), std::atoi(argv[2]), std::atoi(argv[3])};
+        ippl::Vector<int, Dim> nrOrig;
 
         static IpplTimings::TimerRef mainTimer        = IpplTimings::getTimer("mainTimer");
         static IpplTimings::TimerRef particleCreation = IpplTimings::getTimer("particlesCreation");
@@ -168,37 +158,53 @@ int main(int argc, char* argv[]) {
         const size_type totalP = std::atoll(argv[4]);
         const unsigned int nt  = std::atoi(argv[5]);
         const double dt        = std::atof(argv[6]);
+    	const std::string parallel_strategy = argv[10];
+    	const std::string output_type = argv[11];
 
-        double factor             = 1.0 / ippl::Comm->size();
-        size_type nloc            = (size_type)(factor * totalP);
-        size_type Total_particles = 0;
-
-        MPI_Allreduce(&nloc, &Total_particles, 1, MPI_UNSIGNED_LONG, MPI_SUM,
-                      ippl::Comm->getCommunicator());
 
         msg << TestName << endl
             << "nt " << nt << " Np= " << Total_particles << " Fourier modes = " << nr << endl;
 
         using bunch_type = ChargedParticlesPIF<PLayout_t>;
 
-        std::shared_ptr<bunch_type> P;
+        std::unique_ptr<bunch_type> P;
 
         ippl::NDIndex<Dim> domain;
+        ippl::NDIndex<Dim> domainOrig;
         for (unsigned i = 0; i < Dim; i++) {
+	        //For upsampling the grid
+	        nrOrig[i] = nr[i];
+	        //parallel_strategy = "dd" referes to domain decomposition where both fields and particles are 
+	        //split between ranks whereas parallel_strategy = "pd" referes to particle decomposition where
+	        //only particles are split between ranks
+	        if(output_type == "--use-upsampled") {
+	            nr[i] = 2 * nr[i];
+	        }
             domain[i] = ippl::Index(nr[i]);
+            domainOrig[i] = ippl::Index(nrOrig[i]);
         }
 
         std::array<bool, Dim> isParallel;  // Specifies SERIAL, PARALLEL dims
-        isParallel.fill(false);
+	    if(parallel_strategy == "dd") {
+           	isParallel.fill(true);
+	    }
+	    else if(parallel_strategy == "pd") {
+           	isParallel.fill(false);
+	    }
 
         // create mesh and layout objects for this problem domain
         Vector_t rmin(0.0);
         Vector_t rmax(25.0);
-        double dx = rmax[0] / nr[0];
-        double dy = rmax[1] / nr[1];
-        double dz = rmax[2] / nr[2];
-
         Vector_t length = rmax - rmin;
+        double dx       = length[0] / nr[0];
+        double dy       = length[1] / nr[1];
+        double dz       = length[2] / nr[2];
+        double dxOrig       = length[0] / nrOrig[0];
+        double dyOrig       = length[1] / nrOrig[1];
+        double dzOrig       = length[2] / nrOrig[2];
+
+        Vector_t hr     = {dx, dy, dz};
+        Vector_t hrOrig     = {dxOrig, dyOrig, dzOrig};
 
         Vector_t mu, sd;
 
@@ -212,13 +218,59 @@ int main(int argc, char* argv[]) {
         sd[1] = 0.05 * 20.0;  // length[1];
         sd[2] = 0.15 * 20.0;  // length[2];
 
-        Vector_t hr     = {dx, dy, dz};
         Vector_t origin = {rmin[0], rmin[1], rmin[2]};
 
         const bool isAllPeriodic = true;
         Mesh_t mesh(domain, hr, origin);
-        FieldLayout_t FL(*ippl::Comm, domain, isParallel);
-        PLayout_t PL(FL, mesh);
+        Mesh_t meshOrig(domainOrig, hrOrig, origin);
+        std::unique_ptr<ippl::mpi::Communicator> comm_penning = 0;
+	    if(parallel_strategy == "dd") {
+            comm_penning = std::make_unique<ippl::mpi::Communicator>(*ippl::Comm);
+	    }
+	    else if(parallel_strategy == "pd") {
+            comm_penning = std::make_unique<ippl::mpi::Communicator>(MPI_COMM_SELF);
+	    }
+        FieldLayout_t FL(*comm_penning, domain, isParallel, isAllPeriodic);
+        FieldLayout_t FLOrig(*comm_penning, domainOrig, isParallel, isAllPeriodic);
+        PLayout_t PL(FLOrig, meshOrig);
+
+        IpplTimings::startTimer(particleCreation);
+
+	    typedef ippl::detail::RegionLayout<double, Dim, Mesh_t>::uniform_type RegionLayout_t;
+        const RegionLayout_t& RLayout                           = PL.getRegionLayout();
+        const typename RegionLayout_t::host_mirror_type Regions = RLayout.gethLocalRegions();
+        Vector_t Nr, Dr, minU, maxU;
+        int myRank    = ippl::Comm->rank();
+        double factor = 1;
+        for (unsigned d = 0; d < Dim; ++d) {
+            if(parallel_strategy == "dd") {
+                Nr[d] = CDF(Regions(myRank)[d].max(), mu[d], sd[d])
+                        - CDF(Regions(myRank)[d].min(), mu[d], sd[d]);
+                Dr[d]   = CDF(rmax[d], mu[d], sd[d]) - CDF(rmin[d], mu[d], sd[d]);
+                minU[d] = CDF(Regions(myRank)[d].min(), mu[d], sd[d]);
+                maxU[d] = CDF(Regions(myRank)[d].max(), mu[d], sd[d]);
+                factor *= Nr[d] / Dr[d];
+            }
+            else if(parallel_strategy == "pd") { 
+                minU[d] = CDF(rmin[d], mu[d], sd[d]);
+                maxU[d] = CDF(rmax[d], mu[d], sd[d]);
+            }
+        }
+        if(parallel_strategy == "pd") { 
+            factor = 1.0 / ippl::Comm->size();
+        } 
+
+	    size_type nloc            = (size_type)(factor * totalP);
+        size_type Total_particles = 0;
+
+        MPI_Allreduce(&nloc, &Total_particles, 1, MPI_UNSIGNED_LONG, MPI_SUM,
+                      ippl::Comm->getCommunicator());
+
+        int rest = (int)(totalP - Total_particles);
+
+        if (ippl::Comm->rank() < rest) {
+            ++nloc;
+        }
 
         double Q    = -1562.5;
         double Bext = 5.0;
@@ -234,40 +286,40 @@ int main(int argc, char* argv[]) {
         // Initialize an FFT object for getting rho in real space and
         // doing charge conservation check
 
-        ippl::ParameterList fftParams;
-        fftParams.add("use_heffte_defaults", false);
-        fftParams.add("use_pencils", true);
-        fftParams.add("use_reorder", false);
-        fftParams.add("use_gpu_aware", true);
-        fftParams.add("comm", ippl::p2p_pl);
-        fftParams.add("r2c_direction", 0);
+        //ippl::ParameterList fftParams;
+        //fftParams.add("use_heffte_defaults", false);
+        //fftParams.add("use_pencils", true);
+        //fftParams.add("use_reorder", false);
+        //fftParams.add("use_gpu_aware", true);
+        //fftParams.add("comm", ippl::p2p_pl);
+        //fftParams.add("r2c_direction", 0);
 
-        ippl::NDIndex<Dim> domainPIFhalf;
+        //ippl::NDIndex<Dim> domainPIFhalf;
 
-        for (unsigned d = 0; d < Dim; ++d) {
-            // if(fftParams.template get<int>("r2c_direction") == (int)d)
-            //     domainPIFhalf[d] = ippl::Index(domain[d].length()/2 + 1);
-            // else
-            domainPIFhalf[d] = ippl::Index(domain[d].length());
-        }
+        //for (unsigned d = 0; d < Dim; ++d) {
+        //    // if(fftParams.template get<int>("r2c_direction") == (int)d)
+        //    //     domainPIFhalf[d] = ippl::Index(domain[d].length()/2 + 1);
+        //    // else
+        //    domainPIFhalf[d] = ippl::Index(domain[d].length());
+        //}
 
-        FieldLayout_t FLPIFhalf(*ippl::Comm, domainPIFhalf, isParallel);
+        //FieldLayout_t FLPIFhalf(*ippl::Comm, domainPIFhalf, isParallel);
 
-        ippl::Vector<double, 3> hDummy      = {1.0, 1.0, 1.0};
-        ippl::Vector<double, 3> originDummy = {0.0, 0.0, 0.0};
-        Mesh_t meshPIFhalf(domainPIFhalf, hDummy, originDummy);
+        //ippl::Vector<double, 3> hDummy      = {1.0, 1.0, 1.0};
+        //ippl::Vector<double, 3> originDummy = {0.0, 0.0, 0.0};
+        //Mesh_t meshPIFhalf(domainPIFhalf, hDummy, originDummy);
 
-        ippl::Vector<double, 3> hFourier      = {2 * pi / length[0], 2 * pi / length[1],
-                                                 2 * pi / length[2]};
-        ippl::Vector<double, 3> originFourier = {-pi / hr[0], -pi / hr[1], -pi / hr[2]};
-        Mesh_t meshFourier(domain, hFourier, originFourier);
+        //ippl::Vector<double, 3> hFourier      = {2 * pi / length[0], 2 * pi / length[1],
+        //                                         2 * pi / length[2]};
+        //ippl::Vector<double, 3> originFourier = {-pi / hr[0], -pi / hr[1], -pi / hr[2]};
+        //Mesh_t meshFourier(domain, hFourier, originFourier);
 
-        P->rhoPIFreal_m.initialize(mesh, FL);
-        P->rhoPIFhalf_m.initialize(meshPIFhalf, FLPIFhalf);
-        P->rhoPIFFourierMag_m.initialize(meshFourier, FL);
+        //P->rhoPIFreal_m.initialize(mesh, FL);
+        //P->rhoPIFhalf_m.initialize(meshPIFhalf, FLPIFhalf);
+        //P->rhoPIFFourierMag_m.initialize(meshFourier, FL);
 
-        // P->fft_mp = std::make_shared<FFT_t>(FL, FLPIFhalf, fftParams);
-        // P->fft_mp = std::make_shared<FFT_t>(FLPIFhalf, fftParams);
+        //// P->fft_mp = std::make_shared<FFT_t>(FL, FLPIFhalf, fftParams);
+        //// P->fft_mp = std::make_shared<FFT_t>(FLPIFhalf, fftParams);
 
         ////////////////////////////////////////////////////////////
 
@@ -275,19 +327,6 @@ int main(int argc, char* argv[]) {
 
         P->shapetype_m   = argv[7];
         P->shapedegree_m = std::atoi(argv[8]);
-
-        IpplTimings::startTimer(particleCreation);
-
-        Vector_t minU, maxU;
-        for (unsigned d = 0; d < Dim; ++d) {
-            minU[d] = CDF(rmin[d], mu[d], sd[d]);
-            maxU[d] = CDF(rmax[d], mu[d], sd[d]);
-        }
-
-        // int rest = (int) (totalP - Total_particles);
-
-        // if ( Ippl::Comm->rank() < rest )
-        //     ++nloc;
 
         P->create(nloc);
         Kokkos::Random_XorShift64_Pool<> rand_pool64((size_type)(42 + 100 * ippl::Comm->rank()));
@@ -299,29 +338,29 @@ int main(int argc, char* argv[]) {
         ippl::Comm->barrier();
         IpplTimings::stopTimer(particleCreation);
 
+        msg << "Penning trap" << endl
+            << "nt " << nt << " Np= " << Total_particles << " Fourier modes = " << nr << endl;
+
+
         P->q = P->Q_m / Total_particles;
         msg << "particles created and initial conditions assigned " << endl;
 
         IpplTimings::startTimer(initializeShapeFunctionPIF);
-        P->initializeShapeFunctionPIF();
+        P->initializeShapeFunctionPIF(output_type);
         IpplTimings::stopTimer(initializeShapeFunctionPIF);
 
         double tol = std::atof(argv[9]);
-        P->initNUFFT(FL, tol);
+        P->initNUFFT(FLOrig, tol, output_type);
+	    if(parallel_strategy == "dd") {
+		    P->update();
+	    }
 
         P->scatter();
 
         P->gather();
 
         IpplTimings::startTimer(dumpDataTimer);
-        // P->dumpEnergy();
-#ifdef ENABLE_CATALYST
-        P->rhoPIFreal_m = (1 / (hr[0] * hr[1] * hr[2])) * P->rhoPIFreal_m;
-        std::vector<CatalystAdaptor::FieldPair> fields = {
-            {"rhoK", CatalystAdaptor::FieldVariant(&P->rhoPIFFourierMag_m)},
-            {"rhoR", CatalystAdaptor::FieldVariant(&P->rhoPIFreal_m)}};
-        CatalystAdaptor::Execute(0, P->time_m, Ippl::Comm->rank(), P, fields);
-#endif
+        P->dumpEnergy();
         IpplTimings::stopTimer(dumpDataTimer);
 
         double alpha = -0.5 * dt;
@@ -365,10 +404,13 @@ int main(int argc, char* argv[]) {
             P->R = P->R + dt * P->P;
             IpplTimings::stopTimer(RTimer);
 
-            // Apply particle BC
-            IpplTimings::startTimer(BCTimer);
-            PL.applyBC(P->R, PL.getRegionLayout().getDomain());
-            IpplTimings::stopTimer(BCTimer);
+            // Apply particle BC or do update depending on parallel strategy
+	        if(parallel_strategy == "pd") {
+                PL.applyBC(P->R, PL.getRegionLayout().getDomain());
+	        }
+	        else if(parallel_strategy == "dd") {
+	        	P->update();
+	        }
 
             // scatter the charge onto the underlying grid
             P->scatter();
@@ -407,20 +449,13 @@ int main(int argc, char* argv[]) {
 
             P->time_m += dt;
             IpplTimings::startTimer(dumpDataTimer);
-            // P->dumpEnergy();
-#ifdef ENABLE_CATALYST
-            P->rhoPIFreal_m = (1 / (hr[0] * hr[1] * hr[2])) * P->rhoPIFreal_m;
-            CatalystAdaptor::Execute(it, P->time_m, Ippl::Comm->rank(), P, fields);
-#endif
+            P->dumpEnergy();
             IpplTimings::stopTimer(dumpDataTimer);
             msg << "Finished time step: " << it + 1 << " time: " << P->time_m << endl;
         }
 
         msg << TestName << " End." << endl;
 
-#ifdef ENABLE_CATALYST
-        CatalystAdaptor::Finalize();
-#endif
 
         IpplTimings::stopTimer(mainTimer);
         IpplTimings::print();
