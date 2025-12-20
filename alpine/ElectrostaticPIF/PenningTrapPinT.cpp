@@ -461,7 +461,7 @@ int main(int argc, char *argv[]){
         Kokkos::Random_XorShift64_Pool<> rand_pool64((size_type)(42 + 100*rankSpace));
         Kokkos::parallel_for(nloc,
                              generate_random<Vector_t, Kokkos::Random_XorShift64_Pool<>, Dim>(
-                             Pbegin->R.getView(), Pbegin->P.getView(), rand_pool64, alpha, kw, minU, maxU));
+                             Pbegin->R.getView(), Pbegin->P.getView(), rand_pool64, mu, sd, minU, maxU));
 
 
         Kokkos::fence();

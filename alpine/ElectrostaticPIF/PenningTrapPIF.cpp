@@ -162,8 +162,6 @@ int main(int argc, char* argv[]) {
     	const std::string output_type = argv[11];
 
 
-        msg << TestName << endl
-            << "nt " << nt << " Np= " << Total_particles << " Fourier modes = " << nr << endl;
 
         using bunch_type = ChargedParticlesPIF<PLayout_t>;
 
@@ -275,7 +273,7 @@ int main(int argc, char* argv[]) {
         double Q    = -1562.5;
         double Bext = 5.0;
         // P = std::make_unique<bunch_type>(PL,hr,rmin,rmax,decomp,Q,Total_particles);
-        P = std::make_shared<bunch_type>(PL, hr, rmin, rmax, isParallel, Q, Total_particles);
+        P = std::make_unique<bunch_type>(PL, hr, rmin, rmax, isParallel, Q, Total_particles);
 
         P->nr_m = nr;
 

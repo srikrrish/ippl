@@ -745,7 +745,7 @@ public:
             //scatter the charge onto the underlying grid
             temprhoPIC_m = 0.0;
             rhoPIC_m = 0.0;
-            scatter(q, temprhoPIC_m, Rtemp, spaceComm);
+            scatter(q, temprhoPIC_m, Rtemp);
             
             IpplTimings::startTimer(scatterAllReducePICTimer);                                  
             MPI_Allreduce(viewLocal.data(), view.data(), viewSize, 
