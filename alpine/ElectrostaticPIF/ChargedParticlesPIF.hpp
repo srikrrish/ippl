@@ -368,6 +368,7 @@ public:
                 valL += myVal;
             },
             Kokkos::Sum<double>(temp));
+        Kokkos::fence();
 
         double globaltemp = 0.0;
         layout.comm.reduce(temp, globaltemp, 1, std::plus<double>(), 0);
@@ -387,6 +388,7 @@ public:
                 valL += myVal;
             },
             Kokkos::Sum<double>(temp));
+        Kokkos::fence();
 
         temp *= 0.5;
         globaltemp = 0.0;
@@ -468,6 +470,7 @@ public:
                 "Total Momentum", this->getLocalNum(),
                 KOKKOS_LAMBDA(const int i, double& valL) { valL += (-qView(i)) * Pview(i)[d]; },
                 Kokkos::Sum<double>(tempD));
+            Kokkos::fence();
             totalMomentum[d] = tempD;
         }
 
