@@ -164,7 +164,7 @@ public:
 
         fftParams1.add("tolerance", tol);
         fftParams2.add("tolerance", tol);
-#ifdef FINUFFT_USE_CUDA
+#ifdef ENABLE_GPU_NUFFT
         fftParams1.add("gpu_method", 2);
         fftParams1.add("gpu_sort", 0);
         fftParams1.add("gpu_kerevalmeth", 1);
@@ -191,8 +191,8 @@ public:
         fftParams2.add("nthreads", 0);
 #endif
 
-        fftParams1.add("use_finufft_defaults", false);
-        fftParams2.add("use_finufft_defaults", false);
+        fftParams1.add("use_finufft", true);
+        fftParams2.add("use_finufft", true);
         fftParams1.add("use_kokkos_nufft", false);
         fftParams2.add("use_kokkos_nufft", false);
 	    if(output_type == "--use-upsampled") {

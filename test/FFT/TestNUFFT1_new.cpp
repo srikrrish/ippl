@@ -171,7 +171,7 @@ int main(int argc, char* argv[]) {
         fftParams.add("nthreads", 0);
 #endif
 
-        fftParams.add("use_finufft_defaults", false);
+        fftParams.add("use_finufft", true);
         fftParams.add("use_kokkos_nufft", false);
 
         fftParams.add("spread_method", "tiled");
@@ -179,7 +179,7 @@ int main(int argc, char* argv[]) {
         fftParams.add("z_tiles", 1);
         // fftParams.add("team_size", 4);
         fftParams.add("sort", true);
-        fftParams.add("use_upsampled_inputs", true);
+        fftParams.add("use_upsampled_inputs", false);
 
         typedef ippl::FFT<ippl::NUFFTransform, real_field_type> FFT_type;
 

@@ -59,7 +59,8 @@ namespace Interpolation {
     template <>
     inline GatherConfig GatherConfig::get_default<Kokkos::Cuda>() {
         GatherConfig config;
-        config.method = GatherMethod::AtomicSort;
+        //config.method = GatherMethod::AtomicSort;
+        config.method = GatherMethod::Atomic;
         config.sort = true;
         config.tile_size_3d = 4;
         config.z_tiles = 6;

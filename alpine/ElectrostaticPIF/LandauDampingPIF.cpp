@@ -350,7 +350,9 @@ int main(int argc, char* argv[]) {
 	    if(parallel_strategy == "dd") {
 		    P->update();
 	    }
+        msg << "Before scatter" << endl;
         P->scatter();
+        msg << "After scatter" << endl;
 
         P->gather();
 
