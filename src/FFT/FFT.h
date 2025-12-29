@@ -516,10 +516,10 @@ namespace ippl {
         view_particle_real_type tempR_m[3] = {};
         view_particle_complex_type tempQ_m;
         bool use_kokkos_nufft;
+        std::array<int64_t, 3> n_modes;
 
 #ifdef KOKKOS_NUFFT_AVAILABLE
         std::unique_ptr<kokkos_nufft_t> kokkos_nufft_plan;
-        std::array<int64_t, 3> n_modes;
 #endif
     };
 }  // namespace ippl

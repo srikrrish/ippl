@@ -327,7 +327,8 @@ if(IPPL_ENABLE_FFT AND IPPL_ENABLE_FINUFFT)
   FetchContent_Declare(
           finufft
           GIT_REPOSITORY https://github.com/flatironinstitute/finufft.git
-          GIT_SHALLOW TRUE
+          #GIT_SHALLOW TRUE
+          GIT_TAG 165c46b
   )
   if("CUDA" IN_LIST IPPL_PLATFORMS)
     set(FINUFFT_USE_CUDA ON CACHE BOOL "")

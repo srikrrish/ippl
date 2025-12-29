@@ -115,7 +115,7 @@ int main(int argc, char* argv[]) {
 
         ippl::ParameterList fftParams;
 
-        fftParams.add("tolerance", 1e-12);
+        fftParams.add("tolerance", 1e-6);
 #ifdef ENABLE_GPU_NUFFT
         fftParams.add("gpu_method", 1);
         fftParams.add("gpu_sort", 0);
@@ -126,7 +126,7 @@ int main(int argc, char* argv[]) {
         fftParams.add("nthreads", 0);
 #endif
 
-        fftParams.add("use_finufft_defaults", false);
+        fftParams.add("use_finufft_defaults", true);
 
         typedef ippl::FFT<ippl::NUFFTransform, real_field_type> FFT_type;
 
