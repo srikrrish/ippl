@@ -1352,7 +1352,7 @@ namespace ippl {
         } else if (use_finufft) {
 #ifdef ENABLE_FINUFFT
 
-#if ENABLE_GPU_NUFFT
+#ifdef ENABLE_GPU_NUFFT
             cufinufft_opts opts;
             cufinufft_default_opts(&opts);
 #else
@@ -1397,21 +1397,11 @@ namespace ippl {
 
             // dim in finufft is int
             int dim = static_cast<int>(Dim);
-            std::cout << "Before make plan" << std::endl;
-            std::cout << "Nmodes: " << this->n_modes[0] << this->n_modes[1] << this->n_modes[2] <<  " Type: " << type_m << " Dim: "<< dim << " Iflag: " << iflag << " Tol: " << tol_m  << std::endl;
             
-            //Kokkos::fence();
-            cudaDeviceSynchronize();
             ier_m   = nufft_m.makeplan(type_m, dim, this->n_modes.data(), iflag, 1, tol_m, &plan_m,
-                                       NULL);
-            //Kokkos::fence();
-            std::cout << "After make plan ier: " << ier_m << std::endl;
-            if(plan_m != nullptr) {
-                std::cout << "Plan created successfully and not null " << std::endl;
-            }
+                                       &opts);
 
 #else
-        std::cout<<"Error thrown in FINUFFT setup"<< std::endl;    
         throw IpplException(
                 "FFT<NUFFTransform>::setup",
                 "FINUFFT requested but not available (IPPL_ENABLE_FINUFFT not set)");
@@ -1693,20 +1683,11 @@ namespace ippl {
 #endif
                 });
 
-            std::cout << "Before set pts" << std::endl;
-            if((tempR[0].data() == nullptr) || (tempR[1].data() == nullptr) || (tempR[2].data() == nullptr)) {
-                std::cout << "Null tempR" << std::endl;
-            }
-            if(plan_m == nullptr) {
-                std::cout << "Null plan" << std::endl;
-            }
 
             ier_m = nufft_m.setpts(plan_m, localNp, tempR[0].data(), tempR[1].data(),
                                    tempR[2].data(), 0, NULL, NULL, NULL);
-            std::cout << "After set pts" << std::endl;
 
             ier_m = nufft_m.execute(plan_m, tempQ.data(), tempField.data());
-            std::cout << "After execute" << std::endl;
             Kokkos::fence();
 
             if (type_m == 1) {
@@ -1737,7 +1718,6 @@ namespace ippl {
                     });
             }
 #else
-            std::cout<<"Error thrown in FINUFFT transform"<< std::endl;    
             throw IpplException("FFT<NUFFTransform>::transform",
                                 "FINUFFT requested but not available");
 #endif
