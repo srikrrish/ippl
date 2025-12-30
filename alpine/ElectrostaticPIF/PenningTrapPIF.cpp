@@ -133,6 +133,19 @@ double CDF(const double& x, const double& mu, const double& sigma) {
     return cdf;
 }
 
+KOKKOS_FUNCTION
+double PDF(const Vector_t& xvec, const Vector_t&mu, 
+             const Vector_t& sigma, const unsigned Dim) {
+    double pdf = 1.0;
+    double pi = std::acos(-1.0);
+
+    for (unsigned d = 0; d < Dim; ++d) {
+        pdf *= (1.0/ (sigma[d] * std::sqrt(2 * pi))) * 
+                  std::exp(-0.5 * std::pow((xvec[d] - mu[d])/sigma[d],2));
+    }
+    return pdf;
+}
+
 const char* TestName = "PenningTrapPIF";
 
 int main(int argc, char* argv[]) {
@@ -152,6 +165,7 @@ int main(int argc, char* argv[]) {
         static IpplTimings::TimerRef BCTimer          = IpplTimings::getTimer("particleBC");
         static IpplTimings::TimerRef initializeShapeFunctionPIF =
             IpplTimings::getTimer("initializeShapeFunctionPIF");
+        static IpplTimings::TimerRef domainDecomposition = IpplTimings::getTimer("loadBalance");
 
         IpplTimings::startTimer(mainTimer);
 
@@ -232,6 +246,52 @@ int main(int argc, char* argv[]) {
         FieldLayout_t FLOrig(*comm_penning, domainOrig, isParallel, isAllPeriodic);
         PLayout_t PL(FLOrig, meshOrig);
 
+        double Q    = -1562.5;
+        double Bext = 5.0;
+        // P = std::make_unique<bunch_type>(PL,hr,rmin,rmax,decomp,Q,Total_particles);
+        P = std::make_unique<bunch_type>(PL, hr, rmin, rmax, isParallel, Q, totalP);
+
+        P->nr_m = nr;
+
+        P->rho_m.initialize(mesh, FL);
+        P->Sk_m.initialize(mesh, FL);
+        
+        P->time_m = 0.0;
+        P->loadbalancethreshold_m = std::atof(argv[12]);
+
+        bool isFirstRepartition;
+       
+	    if(parallel_strategy == "dd") {
+            if ((P->loadbalancethreshold_m != 1.0) && (ippl::Comm->size() > 1)) {
+                msg << "Starting first repartition" << endl;
+                IpplTimings::startTimer(domainDecomposition);
+                isFirstRepartition             = true;
+                const ippl::NDIndex<Dim>& lDom = FL.getLocalNDIndex();
+                const int nghost               = P->rho_m.getNghost();
+                auto rhoview                   = P->rho_m.getView();
+
+                using index_array_type = typename ippl::RangePolicy<Dim>::index_array_type;
+                ippl::parallel_for(
+                    "Assign initial rho based on PDF", ippl::getRangePolicy(rhoview, nghost),
+                    KOKKOS_LAMBDA(const index_array_type& args) {
+                        // local to global index conversion
+                        Vector_t<double, Dim> xvec = (args + lDom.first() - nghost + 0.5) * hr + origin;
+
+                        // ippl::apply accesses the view at the given indices and obtains a
+                        // reference; see src/Expression/IpplOperations.h
+                        ippl::apply(rhoview, args) = PDF(xvec, mu, sd, Dim);
+                    });
+
+                Kokkos::fence();
+
+                P->initializeORB(FL, mesh);
+                P->repartition(FL, mesh, isFirstRepartition);
+                IpplTimings::stopTimer(domainDecomposition);
+            }
+
+            msg << "First domain decomposition done" << endl;
+        }
+ 
         IpplTimings::startTimer(particleCreation);
 
 	    typedef ippl::detail::RegionLayout<double, Dim, Mesh_t>::uniform_type RegionLayout_t;
@@ -270,15 +330,6 @@ int main(int argc, char* argv[]) {
             ++nloc;
         }
 
-        double Q    = -1562.5;
-        double Bext = 5.0;
-        // P = std::make_unique<bunch_type>(PL,hr,rmin,rmax,decomp,Q,Total_particles);
-        P = std::make_unique<bunch_type>(PL, hr, rmin, rmax, isParallel, Q, Total_particles);
-
-        P->nr_m = nr;
-
-        P->rho_m.initialize(mesh, FL);
-        P->Sk_m.initialize(mesh, FL);
 
         ////////////////////////////////////////////////////////////
         // Initialize an FFT object for getting rho in real space and
@@ -321,7 +372,6 @@ int main(int argc, char* argv[]) {
 
         ////////////////////////////////////////////////////////////
 
-        P->time_m = 0.0;
 
         P->shapetype_m   = argv[7];
         P->shapedegree_m = std::atoi(argv[8]);
@@ -343,6 +393,8 @@ int main(int argc, char* argv[]) {
         P->q = P->Q_m / Total_particles;
         msg << "particles created and initial conditions assigned " << endl;
 
+        isFirstRepartition = false;
+        
         IpplTimings::startTimer(initializeShapeFunctionPIF);
         P->initializeShapeFunctionPIF(output_type);
         IpplTimings::stopTimer(initializeShapeFunctionPIF);
@@ -408,7 +460,15 @@ int main(int argc, char* argv[]) {
 	        }
 	        else if(parallel_strategy == "dd") {
 	        	P->update();
+                // Domain Decomposition
+                if (P->balance(totalP, it + 1)) {
+                    msg << "Starting repartition" << endl;
+                    IpplTimings::startTimer(domainDecomposition);
+                    P->repartition(FL, mesh, isFirstRepartition);
+                    IpplTimings::stopTimer(domainDecomposition);
+                }
 	        }
+
 
             // scatter the charge onto the underlying grid
             P->scatter();
