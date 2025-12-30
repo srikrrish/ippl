@@ -16,10 +16,6 @@ set (COMPILE_FLAGS ${OPAL_CXX_FLAGS})
 add_executable (LandauDampingPIF LandauDampingPIF.cpp)
 target_link_libraries (LandauDampingPIF PRIVATE ${IPPL_LIBS})
 
-if(IPPL_ENABLE_FINUFFT)
-    target_link_libraries(LandauDampingPIF PRIVATE cufinufft finufft)
-endif()
-
 add_executable (BumponTailInstabilityPIF BumponTailInstabilityPIF.cpp)
 target_link_libraries (BumponTailInstabilityPIF PRIVATE ${IPPL_LIBS})
 
@@ -34,6 +30,16 @@ target_link_libraries (LandauDampingPinT PRIVATE ${IPPL_LIBS})
 
 add_executable (PenningTrapPinT PenningTrapPinT.cpp)
 target_link_libraries (PenningTrapPinT PRIVATE ${IPPL_LIBS})
+
+if(IPPL_ENABLE_FINUFFT)
+    target_link_libraries(LandauDampingPIF PRIVATE cufinufft finufft)
+    target_link_libraries(BumponTailInstabilityPIF PRIVATE cufinufft finufft)
+    target_link_libraries(PenningTrapPIF PRIVATE cufinufft finufft)
+    target_link_libraries(LandauDampingPIFPruned PRIVATE cufinufft finufft)
+    target_link_libraries(LandauDampingPinT PRIVATE cufinufft finufft)
+    target_link_libraries(PenningTrapPinT PRIVATE cufinufft finufft)
+endif()
+
 
 # vi: set et ts=4 sw=4 sts=4:
 

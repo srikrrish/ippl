@@ -176,54 +176,62 @@ public:
     void initNUFFTs(FieldLayout_t& FLPIF, double& coarseTol,
                     double& fineTol, const std::string& output_type) {
         
-        ippl::ParameterList fftCoarseParams,fftFineParams;
+        ippl::ParameterList fftCoarseParams1,fftCoarseParams2,fftFineParams1,fftFineParams2;
 
-        fftFineParams.add("tolerance", fineTol);
-        fftCoarseParams.add("tolerance", coarseTol);
+        fftFineParams1.add("tolerance", fineTol);
+        fftFineParams2.add("tolerance", fineTol);
+        fftCoarseParams1.add("tolerance", coarseTol);
+        fftCoarseParams2.add("tolerance", coarseTol);
         
 #ifdef ENABLE_GPU_NUFFT
-        fftFineParams.add("gpu_method", 2);
-        fftFineParams.add("gpu_sort", 0);
-        fftFineParams.add("gpu_kerevalmeth", 1);
-        fftFineParams.add("gpu_binsizex", 8);
-        fftFineParams.add("gpu_binsizey", 8);
-        fftFineParams.add("gpu_binsizez", 2);
-        fftFineParams.add("gpu_maxsubprobsize", 1024);
+        fftFineParams1.add("gpu_method", 3);
+        fftFineParams1.add("gpu_sort", 0);
+        fftFineParams1.add("gpu_kerevalmeth", 1);
+        fftFineParams1.add("gpu_binsizex", 8);
+        fftFineParams1.add("gpu_binsizey", 8);
+        fftFineParams1.add("gpu_binsizez", 2);
+        fftFineParams1.add("gpu_maxsubprobsize", 1024);
 
-        fftCoarseParams.add("gpu_method", 2);
-        fftCoarseParams.add("gpu_sort", 0);
-        fftCoarseParams.add("gpu_kerevalmeth", 1);
-        fftCoarseParams.add("gpu_binsizex", 8);
-        fftCoarseParams.add("gpu_binsizey", 8);
-        fftCoarseParams.add("gpu_binsizez", 2);
-        fftCoarseParams.add("gpu_maxsubprobsize", 1024);
+        fftCoarseParams1.add("gpu_method", 3);
+        fftCoarseParams1.add("gpu_sort", 0);
+        fftCoarseParams1.add("gpu_kerevalmeth", 1);
+        fftCoarseParams1.add("gpu_binsizex", 8);
+        fftCoarseParams1.add("gpu_binsizey", 8);
+        fftCoarseParams1.add("gpu_binsizez", 2);
+        fftCoarseParams1.add("gpu_maxsubprobsize", 1024);
 #else
-        fftFineParams.add("spread_kerevalmeth", 1);
-        fftFineParams.add("spread_sort", 2);
-        fftFineParams.add("nthreads", 0);
+        fftFineParams1.add("spread_kerevalmeth", 1);
+        fftFineParams1.add("spread_sort", 2);
+        fftFineParams1.add("nthreads", 0);
 
-        fftCoarseParams.add("spread_kerevalmeth", 1);
-        fftCoarseParams.add("spread_sort", 2);
-        fftCoarseParams.add("nthreads", 0);
+        fftCoarseParams1.add("spread_kerevalmeth", 1);
+        fftCoarseParams1.add("spread_sort", 2);
+        fftCoarseParams1.add("nthreads", 0);
 #endif
         
 
-        fftFineParams.add("use_finufft_defaults", false);
-        fftCoarseParams.add("use_finufft_defaults", false);
+        fftFineParams1.add("use_finufft", true);
+        fftFineParams2.add("use_finufft", true);
+        fftCoarseParams1.add("use_finufft", true);
+        fftCoarseParams2.add("use_finufft", true);
 	    if(output_type == "--use-upsampled") {
-            fftFineParams.add("use_upsampled_inputs", true);
-            fftCoarseParams.add("use_upsampled_inputs", true);
+            fftFineParams1.add("use_upsampled_inputs", true);
+            fftFineParams2.add("use_upsampled_inputs", true);
+            fftCoarseParams1.add("use_upsampled_inputs", true);
+            fftCoarseParams2.add("use_upsampled_inputs", true);
 	    }
         else {
-            fftFineParams.add("use_upsampled_inputs", false);
-            fftCoarseParams.add("use_upsampled_inputs", false);
+            fftFineParams1.add("use_upsampled_inputs", false);
+            fftFineParams2.add("use_upsampled_inputs", false);
+            fftCoarseParams1.add("use_upsampled_inputs", false);
+            fftCoarseParams2.add("use_upsampled_inputs", false);
 	    }
         
-        nufftType1Fine_mp = std::make_shared<ippl::FFT<ippl::NUFFTransform, Field_t>>(FLPIF, this->getLocalNum(), 1, fftFineParams);
-        nufftType2Fine_mp = std::make_shared<ippl::FFT<ippl::NUFFTransform, Field_t>>(FLPIF, this->getLocalNum(), 2, fftFineParams);
+        nufftType1Fine_mp = std::make_shared<ippl::FFT<ippl::NUFFTransform, Field_t>>(FLPIF, this->getLocalNum(), 1, fftFineParams1);
+        nufftType2Fine_mp = std::make_shared<ippl::FFT<ippl::NUFFTransform, Field_t>>(FLPIF, this->getLocalNum(), 2, fftFineParams2);
 
-        nufftType1Coarse_mp = std::make_shared<ippl::FFT<ippl::NUFFTransform, Field_t>>(FLPIF, this->getLocalNum(), 1, fftCoarseParams);
-        nufftType2Coarse_mp = std::make_shared<ippl::FFT<ippl::NUFFTransform, Field_t>>(FLPIF, this->getLocalNum(), 2, fftCoarseParams);
+        nufftType1Coarse_mp = std::make_shared<ippl::FFT<ippl::NUFFTransform, Field_t>>(FLPIF, this->getLocalNum(), 1, fftCoarseParams1);
+        nufftType2Coarse_mp = std::make_shared<ippl::FFT<ippl::NUFFTransform, Field_t>>(FLPIF, this->getLocalNum(), 2, fftCoarseParams2);
     }
     
     void dumpFieldEnergy(const unsigned int& nc, const unsigned int& iter, int rankTime, int rankSpace) {

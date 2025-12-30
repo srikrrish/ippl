@@ -165,7 +165,7 @@ public:
         fftParams1.add("tolerance", tol);
         fftParams2.add("tolerance", tol);
 #ifdef ENABLE_GPU_NUFFT
-        fftParams1.add("gpu_method", 2);
+        fftParams1.add("gpu_method", 3);
         fftParams1.add("gpu_sort", 0);
         fftParams1.add("gpu_kerevalmeth", 1);
         fftParams1.add("gpu_binsizex", 8);
@@ -173,13 +173,13 @@ public:
         fftParams1.add("gpu_binsizez", 2);
         fftParams1.add("gpu_maxsubprobsize", 1024);
 
-        fftParams2.add("gpu_method", 2);
-        fftParams2.add("gpu_sort", 0);
-        fftParams2.add("gpu_kerevalmeth", 1);
-        fftParams2.add("gpu_binsizex", 8);
-        fftParams2.add("gpu_binsizey", 8);
-        fftParams2.add("gpu_binsizez", 2);
-        fftParams2.add("gpu_maxsubprobsize", 1024);
+        //fftParams2.add("gpu_method", 3);
+        //fftParams2.add("gpu_sort", 0);
+        //fftParams2.add("gpu_kerevalmeth", 1);
+        //fftParams2.add("gpu_binsizex", 8);
+        //fftParams2.add("gpu_binsizey", 8);
+        //fftParams2.add("gpu_binsizez", 2);
+        //fftParams2.add("gpu_maxsubprobsize", 1024);
 
 #else
         fftParams1.add("spread_kerevalmeth", 1);
