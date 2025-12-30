@@ -155,7 +155,7 @@ int main(int argc, char* argv[]) {
         Inform msg2all(TestName, INFORM_ALL_NODES);
 
         ippl::Vector<int, Dim> nr = {std::atoi(argv[1]), std::atoi(argv[2]), std::atoi(argv[3])};
-        ippl::Vector<int, Dim> nrOrig;
+        //ippl::Vector<int, Dim> nrOrig;
 
         static IpplTimings::TimerRef mainTimer        = IpplTimings::getTimer("mainTimer");
         static IpplTimings::TimerRef particleCreation = IpplTimings::getTimer("particlesCreation");
@@ -182,10 +182,10 @@ int main(int argc, char* argv[]) {
         std::unique_ptr<bunch_type> P;
 
         ippl::NDIndex<Dim> domain;
-        ippl::NDIndex<Dim> domainOrig;
+        //ippl::NDIndex<Dim> domainOrig;
         for (unsigned i = 0; i < Dim; i++) {
 	        //For upsampling the grid
-	        nrOrig[i] = nr[i];
+	        //nrOrig[i] = nr[i];
 	        //parallel_strategy = "dd" referes to domain decomposition where both fields and particles are 
 	        //split between ranks whereas parallel_strategy = "pd" referes to particle decomposition where
 	        //only particles are split between ranks
@@ -193,7 +193,7 @@ int main(int argc, char* argv[]) {
 	            nr[i] = 2 * nr[i];
 	        }
             domain[i] = ippl::Index(nr[i]);
-            domainOrig[i] = ippl::Index(nrOrig[i]);
+            //domainOrig[i] = ippl::Index(nrOrig[i]);
         }
 
         std::array<bool, Dim> isParallel;  // Specifies SERIAL, PARALLEL dims
@@ -211,12 +211,12 @@ int main(int argc, char* argv[]) {
         double dx       = length[0] / nr[0];
         double dy       = length[1] / nr[1];
         double dz       = length[2] / nr[2];
-        double dxOrig       = length[0] / nrOrig[0];
-        double dyOrig       = length[1] / nrOrig[1];
-        double dzOrig       = length[2] / nrOrig[2];
+        //double dxOrig       = length[0] / nrOrig[0];
+        //double dyOrig       = length[1] / nrOrig[1];
+        //double dzOrig       = length[2] / nrOrig[2];
 
         Vector_t hr     = {dx, dy, dz};
-        Vector_t hrOrig     = {dxOrig, dyOrig, dzOrig};
+        //Vector_t hrOrig     = {dxOrig, dyOrig, dzOrig};
 
         Vector_t mu, sd;
 
@@ -234,7 +234,7 @@ int main(int argc, char* argv[]) {
 
         const bool isAllPeriodic = true;
         Mesh_t mesh(domain, hr, origin);
-        Mesh_t meshOrig(domainOrig, hrOrig, origin);
+        //Mesh_t meshOrig(domainOrig, hrOrig, origin);
         std::unique_ptr<ippl::mpi::Communicator> comm_penning = 0;
 	    if(parallel_strategy == "dd") {
             comm_penning = std::make_unique<ippl::mpi::Communicator>(*ippl::Comm);
@@ -243,8 +243,9 @@ int main(int argc, char* argv[]) {
             comm_penning = std::make_unique<ippl::mpi::Communicator>(MPI_COMM_SELF);
 	    }
         FieldLayout_t FL(*comm_penning, domain, isParallel, isAllPeriodic);
-        FieldLayout_t FLOrig(*comm_penning, domainOrig, isParallel, isAllPeriodic);
-        PLayout_t PL(FLOrig, meshOrig);
+        //FieldLayout_t FLOrig(*comm_penning, domainOrig, isParallel, isAllPeriodic);
+        //PLayout_t PL(FLOrig, meshOrig);
+        PLayout_t PL(FL, mesh);
 
         double Q    = -1562.5;
         double Bext = 5.0;
@@ -254,6 +255,7 @@ int main(int argc, char* argv[]) {
         P->nr_m = nr;
 
         P->rho_m.initialize(mesh, FL);
+        P->rhoReal_m.initialize(mesh, FL);
         P->Sk_m.initialize(mesh, FL);
         
         P->time_m = 0.0;
@@ -267,19 +269,19 @@ int main(int argc, char* argv[]) {
                 IpplTimings::startTimer(domainDecomposition);
                 isFirstRepartition             = true;
                 const ippl::NDIndex<Dim>& lDom = FL.getLocalNDIndex();
-                const int nghost               = P->rho_m.getNghost();
-                auto rhoview                   = P->rho_m.getView();
+                const int nghost               = P->rhoReal_m.getNghost();
+                auto rhoRealview                   = P->rhoReal_m.getView();
 
                 using index_array_type = typename ippl::RangePolicy<Dim>::index_array_type;
                 ippl::parallel_for(
-                    "Assign initial rho based on PDF", ippl::getRangePolicy(rhoview, nghost),
+                    "Assign initial rho based on PDF", ippl::getRangePolicy(rhoRealview, nghost),
                     KOKKOS_LAMBDA(const index_array_type& args) {
                         // local to global index conversion
-                        Vector_t<double, Dim> xvec = (args + lDom.first() - nghost + 0.5) * hr + origin;
+                        Vector_t xvec = (args + lDom.first() - nghost + 0.5) * hr + origin;
 
                         // ippl::apply accesses the view at the given indices and obtains a
                         // reference; see src/Expression/IpplOperations.h
-                        ippl::apply(rhoview, args) = PDF(xvec, mu, sd, Dim);
+                        ippl::apply(rhoRealview, args) = PDF(xvec, mu, sd, Dim);
                     });
 
                 Kokkos::fence();
@@ -400,7 +402,8 @@ int main(int argc, char* argv[]) {
         IpplTimings::stopTimer(initializeShapeFunctionPIF);
 
         double tol = std::atof(argv[9]);
-        P->initNUFFT(FLOrig, tol, output_type);
+        //P->initNUFFT(FLOrig, tol, output_type);
+        P->initNUFFT(FL, tol, output_type);
 	    if(parallel_strategy == "dd") {
 		    P->update();
 	    }
