@@ -40,14 +40,10 @@ using Field = ippl::Field<T, Dim, Mesh, Centering>;
 template <typename T>
 using ParticleAttrib = ippl::ParticleAttrib<T>;
 
-
 typedef Vector<double, Dim> Vector_t;
 typedef Field<double, Dim, Mesh_t, Centering_t> Field_t;
 typedef Field<Kokkos::complex<double>, Dim, Mesh_t, Centering_t> CxField_t;
 typedef Field<Vector_t, Dim, Mesh_t, Centering_t>::uniform_type VField_t;
-
-template <typename T = double>
-using ORB = ippl::OrthogonalRecursiveBisection<Field_t, T>;
 
 typedef ippl::FFT<ippl::CCTransform, CxField_t> FFT_t;
 
@@ -100,7 +96,6 @@ public:
     //Field_t rhoPIFFourierMag_m;
     //CxField_t rhoDFT_m;
     Field_t Sk_m;
-    Field_t rhoReal_m;
 
     Vector<int, Dim> nr_m;
 
@@ -125,7 +120,7 @@ public:
     double loadbalancethreshold_m;
 
     // ORB
-    ORB<double> orb;
+    ORB<double, Dim> orb;
 
     std::shared_ptr<ippl::FFT<ippl::NUFFTransform, Field_t>> nufftType1_mp, nufftType2_mp;
 
@@ -175,7 +170,6 @@ public:
         IpplTimings::startTimer(tupdateLayout);
         rho_m.updateLayout(fl);
         Sk_m.updateLayout(fl);
-        rhoReal_m.updateLayout(fl);
 
         // Update layout with new FieldLayout
         PLayout& layout = this->getLayout();
@@ -190,7 +184,7 @@ public:
     }
 
     void initializeORB(FieldLayout_t& fl, Mesh_t& mesh) {
-        orb.initialize(fl, mesh, rhoReal_m);
+        orb.initialize(fl, mesh, rho_m);
     }
 
     void repartition(FieldLayout_t& fl, Mesh_t& mesh, bool& isFirstRepartition) {
@@ -259,8 +253,8 @@ public:
         fftParams2.add("nthreads", 0);
 #endif
 
-        fftParams1.add("use_finufft", false);
-        fftParams2.add("use_finufft", false);
+        fftParams1.add("use_finufft", true);
+        fftParams2.add("use_finufft", true);
         fftParams1.add("use_kokkos_nufft", false);
         fftParams2.add("use_kokkos_nufft", false);
 	    if(output_type == "--use-upsampled") {
@@ -641,46 +635,46 @@ public:
         }
     }
 
-    //void dumpFieldData() {
-    //    typename CxField_t::HostMirror rhoNUFFT_host = rho_m.getHostMirror();
-    //    typename Field_t::HostMirror rhoNUFFT_real   = rhoPIFreal_m.getHostMirror();
-    //    // typename CxField_t::HostMirror rhoNUDFT_host = rhoDFT_m.getHostMirror();
-    //    Kokkos::deep_copy(rhoNUFFT_host, rho_m.getView());
-    //    Kokkos::deep_copy(rhoNUFFT_real, rhoPIFreal_m.getView());
-    //    // Kokkos::deep_copy(rhoNUDFT_host, rhoDFT_m.getView());
-    //    const int nghost = rho_m.getNghost();
-    //    std::stringstream pname;
-    //    pname << "data/FieldFFT_";
-    //    pname << ippl::Comm->rank();
-    //    pname << ".csv";
-    //    Inform pcsvout(NULL, pname.str().c_str(), Inform::OVERWRITE, ippl::Comm->rank());
-    //    pcsvout.precision(10);
-    //    pcsvout.setf(std::ios::scientific, std::ios::floatfield);
-    //    pcsvout << "rho" << endl;
-    //    for (int i = 0; i < nr_m[0]; i++) {
-    //        for (int j = 0; j < nr_m[1]; j++) {
-    //            for (int k = 0; k < nr_m[2]; k++) {
-    //                pcsvout << rhoNUFFT_host(i + nghost, j + nghost, k + nghost) << endl;
-    //            }
-    //        }
-    //    }
-    //    std::stringstream pname2;
-    //    pname2 << "data/Fieldreal_";
-    //    pname2 << ippl::Comm->rank();
-    //    pname2 << ".csv";
-    //    Inform pcsvout2(NULL, pname2.str().c_str(), Inform::OVERWRITE, ippl::Comm->rank());
-    //    pcsvout2.precision(10);
-    //    pcsvout2.setf(std::ios::scientific, std::ios::floatfield);
-    //    pcsvout2 << "rho" << endl;
-    //    for (int i = 0; i < nr_m[0]; i++) {
-    //        for (int j = 0; j < nr_m[1]; j++) {
-    //            for (int k = 0; k < nr_m[2]; k++) {
-    //                pcsvout2 << rhoNUFFT_real(i + nghost, j + nghost, k + nghost) << endl;
-    //            }
-    //        }
-    //    }
-    //    ippl::Comm->barrier();
-    //}
+    void dumpFieldData() {
+        typename CxField_t::HostMirror rhoNUFFT_host = rho_m.getHostMirror();
+        typename Field_t::HostMirror rhoNUFFT_real   = rhoPIFreal_m.getHostMirror();
+        // typename CxField_t::HostMirror rhoNUDFT_host = rhoDFT_m.getHostMirror();
+        Kokkos::deep_copy(rhoNUFFT_host, rho_m.getView());
+        Kokkos::deep_copy(rhoNUFFT_real, rhoPIFreal_m.getView());
+        // Kokkos::deep_copy(rhoNUDFT_host, rhoDFT_m.getView());
+        const int nghost = rho_m.getNghost();
+        std::stringstream pname;
+        pname << "data/FieldFFT_";
+        pname << ippl::Comm->rank();
+        pname << ".csv";
+        Inform pcsvout(NULL, pname.str().c_str(), Inform::OVERWRITE, ippl::Comm->rank());
+        pcsvout.precision(10);
+        pcsvout.setf(std::ios::scientific, std::ios::floatfield);
+        pcsvout << "rho" << endl;
+        for (int i = 0; i < nr_m[0]; i++) {
+            for (int j = 0; j < nr_m[1]; j++) {
+                for (int k = 0; k < nr_m[2]; k++) {
+                    pcsvout << rhoNUFFT_host(i + nghost, j + nghost, k + nghost) << endl;
+                }
+            }
+        }
+        std::stringstream pname2;
+        pname2 << "data/Fieldreal_";
+        pname2 << ippl::Comm->rank();
+        pname2 << ".csv";
+        Inform pcsvout2(NULL, pname2.str().c_str(), Inform::OVERWRITE, ippl::Comm->rank());
+        pcsvout2.precision(10);
+        pcsvout2.setf(std::ios::scientific, std::ios::floatfield);
+        pcsvout2 << "rho" << endl;
+        for (int i = 0; i < nr_m[0]; i++) {
+            for (int j = 0; j < nr_m[1]; j++) {
+                for (int k = 0; k < nr_m[2]; k++) {
+                    pcsvout2 << rhoNUFFT_real(i + nghost, j + nghost, k + nghost) << endl;
+                }
+            }
+        }
+        ippl::Comm->barrier();
+    }
 
     // void dumpParticleData() {
 
