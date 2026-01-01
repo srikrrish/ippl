@@ -236,7 +236,7 @@ void Timing::print() {
     Inform msg("Timings");
     msg << level1 << "---------------------------------------------";
     msg << "\n";
-    msg << "     Timing results for " << ippl::Comm->size() << " ranks:"
+    msg << "     Timing results for " << ippl::Comm->size() << " nodes:"
         << "\n";
     msg << "---------------------------------------------";
     msg << "\n";

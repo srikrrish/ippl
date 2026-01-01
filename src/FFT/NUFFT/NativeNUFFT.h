@@ -119,21 +119,6 @@ namespace ippl {
                 initialized_ = false;
             }
 
-            Layout_t& gridLayout() {
-                return *grid_layout_
-            }
-
-            const Layout_t& gridLayout() const {
-                return *grid_layout_
-            }
-            
-            ComplexField& gridField() {
-                return *grid_field_
-            }
-
-            const ComplexField& gridField() const {
-                return *grid_field_
-            }
             /**
              * @brief Initialize the NUFFT with a layout.
              *

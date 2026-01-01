@@ -1459,10 +1459,9 @@ namespace ippl {
                 cfg.gather_config.method = Interpolation::GatherMethod::AtomicSort;
             }
 
-            //auto* nufft_ptr = new NativeNUFFT_t(n_modes_vec, use_upsampled_inputs_m, cfg);
-            native_nufft_ = std::make_unique<NativeNUFFT_t>(n_modes_vec, use_upsampled_inputs_m, cfg);
+            auto* nufft_ptr = new NativeNUFFT_t(n_modes_vec, use_upsampled_inputs_m, cfg);
             nufft_ptr->initialize(layout, layout.comm.getCommunicator());
-            //native_nufft_ = static_cast<void*>(nufft_ptr);
+            native_nufft_ = static_cast<void*>(nufft_ptr);
         }
     }
 

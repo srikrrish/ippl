@@ -609,7 +609,6 @@ namespace ippl {
     class FFT<NUFFTransform, RealField> {
         constexpr static unsigned Dim = RealField::dim;
         using T                       = typename RealField::value_type;
-        using NativeNUFFT_t = NUFFT::NativeNUFFT<Dim, T, typename RealField::execution_space>;
 
     public:
         typedef FieldLayout<Dim> Layout_t;
@@ -632,8 +631,6 @@ namespace ippl {
             typename detail::ViewType<complexType, 1, Kokkos::LayoutLeft>::view_type;
 
         FFT() = default;
-        
-        
 
         /** Create a new FFT object with the layout for the input Field, type
          * (1 or 2) for the NUFFT and parameters for FINUFFT.
@@ -643,14 +640,6 @@ namespace ippl {
 
         // Destructor
         ~FFT();
-
-        NativeNUFFT& nativeNUFFT() {
-            return *native_nufft_
-        }
-        
-        const NativeNUFFT& nativeNUFFT() const {
-            return *native_nufft_
-        }
 
         /** Do the NUFFT.
          */
@@ -718,8 +707,7 @@ namespace ippl {
 #endif
 
         // Native NUFFT implementation (opaque pointer, actual type defined in FFT.hpp)
-        //void* native_nufft_;
-        std::unique_ptr<NativeNUFFT_t> native_nufft_;
+        void* native_nufft_;
     };
 }  // namespace ippl
 
