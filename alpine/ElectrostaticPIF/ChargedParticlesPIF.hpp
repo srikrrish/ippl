@@ -91,10 +91,10 @@ template <class PLayout>
 class ChargedParticlesPIF : public ippl::ParticleBase<PLayout> {
 public:
     CxField_t rho_m;
-    //CxField_t rhoPIFhalf_m;
-    //Field_t rhoPIFreal_m;
-    //Field_t rhoPIFFourierMag_m;
-    //CxField_t rhoDFT_m;
+    CxField_t rhoPIFhalf_m;
+    Field_t rhoPIFreal_m;
+    Field_t rhoPIFFourierMag_m;
+    CxField_t rhoDFT_m;
     Field_t Sk_m;
 
     Vector<int, Dim> nr_m;
@@ -117,10 +117,6 @@ public:
 
     int shapedegree_m;
     //std::shared_ptr<FFT_t> fft_mp;
-    double loadbalancethreshold_m;
-
-    // ORB
-    ORB<double, Dim> orb;
 
     std::shared_ptr<ippl::FFT<ippl::NUFFTransform, Field_t>> nufftType1_mp, nufftType2_mp;
 
@@ -162,64 +158,6 @@ public:
     ~ChargedParticlesPIF() {}
 
     void setupBCs() { setBCAllPeriodic(); }
-
-
-    void updateLayout(FieldLayout_t& fl, Mesh_t& mesh, bool& isFirstRepartition) {
-        // Update local fields
-        static IpplTimings::TimerRef tupdateLayout = IpplTimings::getTimer("updateLayout");
-        IpplTimings::startTimer(tupdateLayout);
-        rho_m.updateLayout(fl);
-        Sk_m.updateLayout(fl);
-
-        // Update layout with new FieldLayout
-        PLayout& layout = this->getLayout();
-        layout.updateLayout(fl, mesh);
-        IpplTimings::stopTimer(tupdateLayout);
-        static IpplTimings::TimerRef tupdatePLayout = IpplTimings::getTimer("updatePB");
-        IpplTimings::startTimer(tupdatePLayout);
-        if (!isFirstRepartition) {
-            this->update();
-        }
-        IpplTimings::stopTimer(tupdatePLayout);
-    }
-
-    void initializeORB(FieldLayout_t& fl, Mesh_t& mesh) {
-        orb.initialize(fl, mesh, rho_m);
-    }
-
-    void repartition(FieldLayout_t& fl, Mesh_t& mesh, bool& isFirstRepartition) {
-        // Repartition the domains
-        bool res = orb.binaryRepartition(this->R, fl, isFirstRepartition);
-
-        if (res != true) {
-            std::cout << "Could not repartition!" << std::endl;
-            return;
-        }
-        // Update
-        this->updateLayout(fl, mesh, isFirstRepartition);
-    }
-
-    bool balance(size_type totalP, const unsigned int nstep) {
-        if (ippl::Comm->size() < 2) {
-            return false;
-        }
-        int local = 0;
-        std::vector<int> res(ippl::Comm->size());
-        double equalPart = (double)totalP / ippl::Comm->size();
-        double dev       = std::abs((double)this->getLocalNum() - equalPart) / totalP;
-        if (dev > loadbalancethreshold_m) {
-            local = 1;
-        }
-        MPI_Allgather(&local, 1, MPI_INT, res.data(), 1, MPI_INT,
-                      ippl::Comm->getCommunicator());
-
-        for (unsigned int i = 0; i < res.size(); i++) {
-            if (res[i] == 1) {
-                return true;
-            }
-        }
-        return false;
-    }
 
     void initNUFFT(FieldLayout_t& FL, double& tol, const std::string& output_type) {
         ippl::ParameterList fftParams1, fftParams2;
