@@ -125,7 +125,7 @@ public:
     double loadbalancethreshold_m;
 
     // ORB
-    ORB<double> orb;
+    ORB<double> orb, orbOrig, orbNUFFT;
 
     std::shared_ptr<ippl::FFT<ippl::NUFFTransform, Field_t>> nufftType1_mp, nufftType2_mp;
 

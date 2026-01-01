@@ -155,7 +155,6 @@ int main(int argc, char* argv[]) {
         Inform msg2all(TestName, INFORM_ALL_NODES);
 
         ippl::Vector<int, Dim> nr = {std::atoi(argv[1]), std::atoi(argv[2]), std::atoi(argv[3])};
-        //ippl::Vector<int, Dim> nrOrig;
 
         static IpplTimings::TimerRef mainTimer        = IpplTimings::getTimer("mainTimer");
         static IpplTimings::TimerRef particleCreation = IpplTimings::getTimer("particlesCreation");
@@ -182,10 +181,14 @@ int main(int argc, char* argv[]) {
         std::unique_ptr<bunch_type> P;
 
         ippl::NDIndex<Dim> domain;
-        //ippl::NDIndex<Dim> domainOrig;
+        ippl::Vector<int, Dim> nrOrig;
+        ippl::NDIndex<Dim> domainOrig;
         for (unsigned i = 0; i < Dim; i++) {
 	        //For upsampling the grid
-	        //nrOrig[i] = nr[i];
+            if(output_type == "--use-upsampled") {
+	            nrOrig[i] = nr[i];
+                domainOrig[i] = ippl::Index(nrOrig[i]);
+            }
 	        //parallel_strategy = "dd" referes to domain decomposition where both fields and particles are 
 	        //split between ranks whereas parallel_strategy = "pd" referes to particle decomposition where
 	        //only particles are split between ranks
@@ -193,7 +196,6 @@ int main(int argc, char* argv[]) {
 	            nr[i] = 2 * nr[i];
 	        }
             domain[i] = ippl::Index(nr[i]);
-            //domainOrig[i] = ippl::Index(nrOrig[i]);
         }
 
         std::array<bool, Dim> isParallel;  // Specifies SERIAL, PARALLEL dims
@@ -211,12 +213,14 @@ int main(int argc, char* argv[]) {
         double dx       = length[0] / nr[0];
         double dy       = length[1] / nr[1];
         double dz       = length[2] / nr[2];
-        //double dxOrig       = length[0] / nrOrig[0];
-        //double dyOrig       = length[1] / nrOrig[1];
-        //double dzOrig       = length[2] / nrOrig[2];
 
         Vector_t hr     = {dx, dy, dz};
-        //Vector_t hrOrig     = {dxOrig, dyOrig, dzOrig};
+        Vector_t hrOrig;
+	    if(output_type == "--use-upsampled") {
+            hrOrig[0]       = length[0] / nrOrig[0];
+            hrOrig[1]       = length[1] / nrOrig[1];
+            hrOrig[2]       = length[2] / nrOrig[2];
+        }
 
         Vector_t mu, sd;
 
@@ -234,7 +238,6 @@ int main(int argc, char* argv[]) {
 
         const bool isAllPeriodic = true;
         Mesh_t mesh(domain, hr, origin);
-        //Mesh_t meshOrig(domainOrig, hrOrig, origin);
         std::unique_ptr<ippl::mpi::Communicator> comm_penning = 0;
 	    if(parallel_strategy == "dd") {
             comm_penning = std::make_unique<ippl::mpi::Communicator>(*ippl::Comm);
@@ -243,17 +246,34 @@ int main(int argc, char* argv[]) {
             comm_penning = std::make_unique<ippl::mpi::Communicator>(MPI_COMM_SELF);
 	    }
         FieldLayout_t FL(*comm_penning, domain, isParallel, isAllPeriodic);
-        //FieldLayout_t FLOrig(*comm_penning, domainOrig, isParallel, isAllPeriodic);
+        std::unique_ptr<FieldLayout_t> FLOrig = 0;
+        std::unique_ptr<Mesh_t> meshOrig = 0;
+        std::unique_ptr<PLayout_t> PL = 0;
+	    if(output_type == "--use-upsampled") {
+            FLOrig = std::make_unique<FieldLayout_t>(*comm_penning, domainOrig, isParallel, isAllPeriodic);
+            meshOrig = std::make_unique<Mesh_t>(domainOrig, hrOrig, origin);
+            PL = std::make_unique<PLayout_t>(*FLOrig, *meshOrig);
+        }
+        else {
+            PL = std::make_unique<PLayout_t>(FL, mesh);
+        }
         //PLayout_t PL(FLOrig, meshOrig);
-        PLayout_t PL(FL, mesh);
+        //PLayout_t PL(FL, mesh);
 
         double Q    = -1562.5;
         double Bext = 5.0;
         // P = std::make_unique<bunch_type>(PL,hr,rmin,rmax,decomp,Q,Total_particles);
-        P = std::make_unique<bunch_type>(PL, hr, rmin, rmax, isParallel, Q, totalP);
+        P = std::make_unique<bunch_type>(*PL, hr, rmin, rmax, isParallel, Q, totalP);
 
         P->nr_m = nr;
 
+	    if(output_type == "--use-upsampled") {
+            P->initNUFFT(*FLOrig, tol, output_type);
+            P->rhoRealOrig_m.initialize(*meshOrig, *FLOrig);
+        }
+        else {
+            P->initNUFFT(FL, tol, output_type);
+        }
         P->rho_m.initialize(mesh, FL);
         P->rhoReal_m.initialize(mesh, FL);
         P->Sk_m.initialize(mesh, FL);
@@ -297,7 +317,7 @@ int main(int argc, char* argv[]) {
         IpplTimings::startTimer(particleCreation);
 
 	    typedef ippl::detail::RegionLayout<double, Dim, Mesh_t>::uniform_type RegionLayout_t;
-        const RegionLayout_t& RLayout                           = PL.getRegionLayout();
+        const RegionLayout_t& RLayout                           = PL->getRegionLayout();
         const typename RegionLayout_t::host_mirror_type Regions = RLayout.gethLocalRegions();
         Vector_t Nr, Dr, minU, maxU;
         int myRank    = ippl::Comm->rank();
@@ -402,8 +422,6 @@ int main(int argc, char* argv[]) {
         IpplTimings::stopTimer(initializeShapeFunctionPIF);
 
         double tol = std::atof(argv[9]);
-        //P->initNUFFT(FLOrig, tol, output_type);
-        P->initNUFFT(FL, tol, output_type);
 	    if(parallel_strategy == "dd") {
 		    P->update();
 	    }
@@ -459,7 +477,7 @@ int main(int argc, char* argv[]) {
 
             // Apply particle BC or do update depending on parallel strategy
 	        if(parallel_strategy == "pd") {
-                PL.applyBC(P->R, PL.getRegionLayout().getDomain());
+                PL->applyBC(P->R, PL->getRegionLayout().getDomain());
 	        }
 	        else if(parallel_strategy == "dd") {
 	        	P->update();
