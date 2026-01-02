@@ -266,7 +266,7 @@ int main(int argc, char *argv[]){
     static IpplTimings::TimerRef deepCopy = IpplTimings::getTimer("deepCopy");
     static IpplTimings::TimerRef finePropagator = IpplTimings::getTimer("finePropagator");
     static IpplTimings::TimerRef coarsePropagator = IpplTimings::getTimer("coarsePropagator");
-    static IpplTimings::TimerRef dumpData = IpplTimings::getTimer("dumpData");
+    //static IpplTimings::TimerRef dumpData = IpplTimings::getTimer("dumpData");
     static IpplTimings::TimerRef computeErrors = IpplTimings::getTimer("computeErrors");
     static IpplTimings::TimerRef initializeShapeFunctionPIF = IpplTimings::getTimer("initializeShapeFunctionPIF");
 
@@ -644,9 +644,9 @@ int main(int argc, char *argv[]){
                 << " Perror: " << Perror
                 << endl;
 
-            IpplTimings::startTimer(dumpData);
-            Pcoarse->writelocalError(Rerror, Perror, nc+1, it+1, rankTime, rankSpace);
-            IpplTimings::stopTimer(dumpData);
+            //IpplTimings::startTimer(dumpData);
+            //Pcoarse->writelocalError(Rerror, Perror, nc+1, it+1, rankTime, rankSpace);
+            //IpplTimings::stopTimer(dumpData);
 
             //MPI_Barrier(spaceComm);
             
@@ -724,7 +724,7 @@ int main(int argc, char *argv[]){
 
     msg << TestName << " Parareal: End." << endl;
     IpplTimings::stopTimer(mainTimer);
-    IpplTimings::print();
+    //IpplTimings::print();
     IpplTimings::print(std::string("timing.dat"));
 
     spaceComm.free();

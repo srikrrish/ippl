@@ -191,8 +191,8 @@ public:
         fftParams2.add("nthreads", 0);
 #endif
 
-        fftParams1.add("use_finufft", true);
-        fftParams2.add("use_finufft", true);
+        fftParams1.add("use_finufft", false);
+        fftParams2.add("use_finufft", false);
         fftParams1.add("use_kokkos_nufft", false);
         fftParams2.add("use_kokkos_nufft", false);
 	    if(output_type == "--use-upsampled") {
@@ -527,9 +527,12 @@ public:
         const FieldLayout_t& layout = Sk_m.getLayout();
         const auto& lDom   = layout.getLocalNDIndex();
         Vector_t dxShape;
-        if(output_type == "--use-upsampled") {
-            for (size_t d = 0; d < Dim; ++d) {
+        for (size_t d = 0; d < Dim; ++d) {
+            if(output_type == "--use-upsampled") {
                 dxShape[d] = 2.0 * dx[d];
+            }
+            else {
+                dxShape[d] = dx[d];
             }
         }
 

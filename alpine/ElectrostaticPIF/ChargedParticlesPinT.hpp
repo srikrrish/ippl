@@ -552,9 +552,12 @@ public:
         const FieldLayout_t& layout = Sk_m.getLayout();
         const auto& lDom   = layout.getLocalNDIndex();
         Vector_t dxShape;
-        if(output_type == "--use-upsampled") {
-            for (size_t d = 0; d < Dim; ++d) {
+        for (size_t d = 0; d < Dim; ++d) {
+            if(output_type == "--use-upsampled") {
                 dxShape[d] = 2.0 * dx[d];
+            }
+            else {
+                dxShape[d] = dx[d];
             }
         }
         
@@ -799,11 +802,11 @@ public:
 
     void LeapFrogPIF(ParticleAttrib<Vector_t>& Rtemp,
                      ParticleAttrib<Vector_t>& Ptemp, const unsigned int& nt, 
-                     const double& dt, const double& tStartMySlice, const unsigned& nc, 
-                     const unsigned int& iter, int rankTime, int rankSpace,
+                     const double& dt, const double& tStartMySlice, const unsigned& /*nc*/, 
+                     const unsigned int& /*iter*/, int /*rankTime*/, int /*rankSpace*/,
                      const std::string& propagator, ippl::mpi::Communicator& spaceComm) {
     
-        static IpplTimings::TimerRef dumpData = IpplTimings::getTimer("dumpData");
+        //static IpplTimings::TimerRef dumpData = IpplTimings::getTimer("dumpData");
         PLayout& PL = this->getLayout();
         rhoPIF_m = {0.0, 0.0};
         if(propagator == "Coarse") {
@@ -831,12 +834,12 @@ public:
     
         time_m = tStartMySlice;
 
-        if((time_m == 0.0) && (propagator == "Fine")) {
-            IpplTimings::startTimer(dumpData);
-            dumpFieldEnergy(nc, iter, rankTime, rankSpace);         
-            dumpEnergy(nc, iter, Ptemp, rankTime, rankSpace, spaceComm);
-            IpplTimings::stopTimer(dumpData);
-        }
+        //if((time_m == 0.0) && (propagator == "Fine")) {
+        //    IpplTimings::startTimer(dumpData);
+        //    dumpFieldEnergy(nc, iter, rankTime, rankSpace);         
+        //    dumpEnergy(nc, iter, Ptemp, rankTime, rankSpace, spaceComm);
+        //    IpplTimings::stopTimer(dumpData);
+        //}
         for (unsigned int it=0; it<nt; it++) {
     
             // kick
@@ -876,24 +879,24 @@ public:
     
             time_m += dt;
             
-            if(propagator == "Fine") {
-                IpplTimings::startTimer(dumpData);
-                dumpFieldEnergy(nc, iter, rankTime, rankSpace);         
-                dumpEnergy(nc, iter, Ptemp, rankTime, rankSpace, spaceComm);         
-                IpplTimings::stopTimer(dumpData);
-            }
+            //if(propagator == "Fine") {
+            //    IpplTimings::startTimer(dumpData);
+            //    dumpFieldEnergy(nc, iter, rankTime, rankSpace);         
+            //    dumpEnergy(nc, iter, Ptemp, rankTime, rankSpace, spaceComm);         
+            //    IpplTimings::stopTimer(dumpData);
+            //}
         }
     }
 
 
     void BorisPIF(ParticleAttrib<Vector_t>& Rtemp,
                      ParticleAttrib<Vector_t>& Ptemp, const unsigned int& nt, 
-                     const double& dt, const double& tStartMySlice, const unsigned& nc, 
-                     const unsigned int& iter, const double& Bext,
-                     int rankTime, int rankSpace,
+                     const double& dt, const double& tStartMySlice, const unsigned& /*nc*/, 
+                     const unsigned int& /*iter*/, const double& Bext,
+                     int /*rankTime*/, int /*rankSpace*/,
                      const std::string& propagator, ippl::mpi::Communicator& spaceComm) {
     
-        static IpplTimings::TimerRef dumpData = IpplTimings::getTimer("dumpData");
+        //static IpplTimings::TimerRef dumpData = IpplTimings::getTimer("dumpData");
         PLayout& PL = this->getLayout();
         rhoPIF_m = {0.0, 0.0};
         if(propagator == "Coarse") {
@@ -919,11 +922,11 @@ public:
 
         time_m = tStartMySlice;
 
-        if((time_m == 0.0) && (propagator == "Fine")) {
-            IpplTimings::startTimer(dumpData);
-            dumpEnergy(nc, iter, Ptemp, rankTime, rankSpace, spaceComm);
-            IpplTimings::stopTimer(dumpData);
-        }
+        //if((time_m == 0.0) && (propagator == "Fine")) {
+        //    IpplTimings::startTimer(dumpData);
+        //    dumpEnergy(nc, iter, Ptemp, rankTime, rankSpace, spaceComm);
+        //    IpplTimings::stopTimer(dumpData);
+        //}
         double alpha = -0.5 * dt;
         double DrInv = 1.0 / (1 + (std::pow((alpha * Bext), 2)));
         Vector_t rmax = rmax_m;
@@ -1007,11 +1010,11 @@ public:
 
             time_m += dt;
             
-            if(propagator == "Fine") {
-                IpplTimings::startTimer(dumpData);
-                dumpEnergy(nc, iter, Ptemp, rankTime, rankSpace, spaceComm);
-                IpplTimings::stopTimer(dumpData);
-            }
+            //if(propagator == "Fine") {
+            //    IpplTimings::startTimer(dumpData);
+            //    dumpEnergy(nc, iter, Ptemp, rankTime, rankSpace, spaceComm);
+            //    IpplTimings::stopTimer(dumpData);
+            //}
         }
     }
 

@@ -720,7 +720,7 @@ int main(int argc, char *argv[]){
 
     msg << TestName << " Parareal: End." << endl;
     IpplTimings::stopTimer(mainTimer);
-    IpplTimings::print();
+    //IpplTimings::print();
     IpplTimings::print(std::string("timing.dat"));
 
     spaceComm.free();

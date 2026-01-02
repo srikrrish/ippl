@@ -146,7 +146,7 @@ int main(int argc, char* argv[]) {
 
         static IpplTimings::TimerRef mainTimer        = IpplTimings::getTimer("mainTimer");
         static IpplTimings::TimerRef particleCreation = IpplTimings::getTimer("particlesCreation");
-        static IpplTimings::TimerRef dumpDataTimer    = IpplTimings::getTimer("dumpData");
+        //static IpplTimings::TimerRef dumpDataTimer    = IpplTimings::getTimer("dumpData");
         static IpplTimings::TimerRef PTimer           = IpplTimings::getTimer("kick");
         static IpplTimings::TimerRef RTimer           = IpplTimings::getTimer("drift");
         static IpplTimings::TimerRef BCTimer          = IpplTimings::getTimer("particleBC");
@@ -273,7 +273,7 @@ int main(int argc, char* argv[]) {
         double Q    = -1562.5;
         double Bext = 5.0;
         // P = std::make_unique<bunch_type>(PL,hr,rmin,rmax,decomp,Q,Total_particles);
-        P = std::make_unique<bunch_type>(PL, hr, rmin, rmax, isParallel, Q, Total_particles);
+        P = std::make_unique<bunch_type>(PL, hr, rmin, rmax, isParallel, Q, totalP);
 
         P->nr_m = nr;
 
@@ -337,10 +337,10 @@ int main(int argc, char* argv[]) {
         IpplTimings::stopTimer(particleCreation);
 
         msg << "Penning trap" << endl
-            << "nt " << nt << " Np= " << Total_particles << " Fourier modes = " << nr << endl;
+            << "nt " << nt << " Np= " << totalP << " Fourier modes = " << nr << endl;
 
 
-        P->q = P->Q_m / Total_particles;
+        P->q = P->Q_m / totalP;
         msg << "particles created and initial conditions assigned " << endl;
 
         IpplTimings::startTimer(initializeShapeFunctionPIF);
@@ -357,9 +357,9 @@ int main(int argc, char* argv[]) {
 
         P->gather();
 
-        IpplTimings::startTimer(dumpDataTimer);
-        P->dumpEnergy();
-        IpplTimings::stopTimer(dumpDataTimer);
+        //IpplTimings::startTimer(dumpDataTimer);
+        //P->dumpEnergy();
+        //IpplTimings::stopTimer(dumpDataTimer);
 
         double alpha = -0.5 * dt;
         double DrInv = 1.0 / (1 + (std::pow((alpha * Bext), 2)));
@@ -446,9 +446,9 @@ int main(int argc, char* argv[]) {
             IpplTimings::stopTimer(PTimer);
 
             P->time_m += dt;
-            IpplTimings::startTimer(dumpDataTimer);
-            P->dumpEnergy();
-            IpplTimings::stopTimer(dumpDataTimer);
+            //IpplTimings::startTimer(dumpDataTimer);
+            //P->dumpEnergy();
+            //IpplTimings::stopTimer(dumpDataTimer);
             msg << "Finished time step: " << it + 1 << " time: " << P->time_m << endl;
         }
 
@@ -456,7 +456,7 @@ int main(int argc, char* argv[]) {
 
 
         IpplTimings::stopTimer(mainTimer);
-        IpplTimings::print();
+        //IpplTimings::print();
         IpplTimings::print(std::string("timing.dat"));
     }
     ippl::finalize();
