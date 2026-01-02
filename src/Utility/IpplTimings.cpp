@@ -254,10 +254,10 @@ void Timing::print() {
         TimerInfo* tptr = TimerList[i].get();
         double wallmax = 0.0, wallmin = 0.0;
         double wallavg = 0.0;
-        size_t lengthName = std::min(tptr->name.length(), 19lu);
         ippl::Comm->reduce(tptr->wallTime, wallmax, 1, std::greater<double>());
         ippl::Comm->reduce(tptr->wallTime, wallmin, 1, std::less<double>());
         ippl::Comm->reduce(tptr->wallTime, wallavg, 1, std::plus<double>());
+        size_t lengthName = std::min(tptr->name.length(), 19lu);
 
         msg << tptr->name.substr(0, lengthName) << std::string().assign(20 - lengthName, '.')
             << " Wall max = " << std::setw(10) << wallmax << "\n"
