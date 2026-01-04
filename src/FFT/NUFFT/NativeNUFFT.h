@@ -330,11 +330,11 @@ namespace ippl {
                 // ============================================================
                 // Step 2.5: Fill ghost cells for gather
                 // ============================================================
-                static IpplTimings::TimerRef FillHaloTimer = IpplTimings::getTimer("FillHaloNUFFT2");
-                IpplTimings::startTimer(FillHaloTimer);
-                grid_field_->fillHalo();
-                Kokkos::fence();
-                IpplTimings::stopTimer(FillHaloTimer);
+                //static IpplTimings::TimerRef FillHaloTimer = IpplTimings::getTimer("FillHaloNUFFT2");
+                //IpplTimings::startTimer(FillHaloTimer);
+                //grid_field_->fillHalo();
+                //Kokkos::fence();
+                //IpplTimings::stopTimer(FillHaloTimer);
 
                 // ============================================================
                 // Step 3: Gather/interpolate at particle positions

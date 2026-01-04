@@ -61,6 +61,7 @@ namespace Interpolation {
         //config.method = ScatterMethod::Tiled;
         //config.method = ScatterMethod::Atomic;
         config.sort = true;
+        //config.tile_size_3d = 3; //previous default value
         config.tile_size_3d = 3;
         config.z_tiles = 4;
         config.team_size = 32;
