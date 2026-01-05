@@ -631,7 +631,7 @@ namespace ippl {
         // int nRanksSpace;
         // MPI_Comm_size(spaceComm, &nRanksSpace);
 
-         if (layoutComm == MPI_COMM_SELF) {
+         if ((layoutComm == MPI_COMM_SELF) && (ippl::Comm->size()>1)) {
             static IpplTimings::TimerRef scatterAllReducePIFTimer =
                 IpplTimings::getTimer("scatterAllReducePIF");
             IpplTimings::startTimer(scatterAllReducePIFTimer);

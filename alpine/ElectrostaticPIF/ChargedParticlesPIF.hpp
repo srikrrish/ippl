@@ -191,8 +191,8 @@ public:
         fftParams2.add("nthreads", 0);
 #endif
 
-        fftParams1.add("use_finufft", false);
-        fftParams2.add("use_finufft", false);
+        fftParams1.add("use_finufft", true);
+        fftParams2.add("use_finufft", true);
         fftParams1.add("use_kokkos_nufft", false);
         fftParams2.add("use_kokkos_nufft", false);
 	    if(output_type == "--use-upsampled") {
