@@ -207,7 +207,7 @@ struct ComputeMortonCodesFunctor {
         // Compute Morton codes
         Kokkos::parallel_for("compute_morton_codes",
             Kokkos::RangePolicy<Kokkos::HIP>(0, n),
-            ComputeMortonCodesFunctor<Dim, decltype(positions), T>{
+            ComputeMortonCodesFunctor<Dim, decltype(positions), T, decltype(keys)>{
                 positions, keys, origin, invdx, ngrid
             });
 
