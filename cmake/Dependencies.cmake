@@ -478,38 +478,40 @@ if(IPPL_ENABLE_FINUFFT)
 endif()
 
 if(IPPL_ENABLE_OPENPMD)
-    add_compile_definitions(IPPL_ENABLE_OPENPMD)
-    if(NOT OPENPMD_VERSION_DEFAULT)
-        set(OPENPMD_VERSION_DEFAULT 0.18.0)
-    endif()
+  add_compile_definitions(IPPL_ENABLE_OPENPMD)
+  if(NOT OPENPMD_VERSION_DEFAULT)
+    set(OPENPMD_VERSION_DEFAULT 0.17.1)
+  endif()
 
-    if(NOT OPENPMD_VERSION)
-        set(OPENPMD_VERSION ${OPENPMD_VERSION_DEFAULT})
-    endif()
+  if(NOT OPENPMD_VERSION)
+    set(OPENPMD_VERSION ${OPENPMD_VERSION_DEFAULT})
+  endif()
 
-    find_package(openPMD CONFIG QUIET)
+  find_package(openPMD CONFIG QUIET)
 
-    if(openPMD_FOUND)
-        colour_message(STATUS ${Green} "✅ OpenPMD found externally")
-    else()
-        colour_message(STATUS ${Green} "✅ OpenPMD ${OPENPMD_VERSION} building from source")
+  if(openPMD_FOUND)
+    colour_message(STATUS ${Green} "✅ OpenPMD found externally")
+  else()
+    colour_message(STATUS ${Green} "✅ OpenPMD ${OPENPMD_VERSION} building from source")
+  endif()
 
-    set(openPMD_BUILD_CLI_TOOLS OFF CACHE BOOL "")
-    set(openPMD_BUILD_EXAMPLES OFF CACHE BOOL "")
-    set(openPMD_BUILD_TESTING OFF CACHE BOOL "")
-    set(openPMD_USE_PYTHON OFF CACHE BOOL "")
-    set(openPMD_USE_MPI ON CACHE STRING "")
-    set(openPMD_USE_HDF5 ON CACHE STRING "")
-    set(openPMD_USE_ADIOS2 ON CACHE STRING "")
-    set(openPMD_INSTALL OFF CACHE BOOL "")
-    
-    FetchContent_Declare(
-        openPMD
-        GIT_REPOSITORY https://github.com/openPMD/openPMD-api.git
-        GIT_TAG 0.18.0
-    )
+  set(openPMD_BUILD_CLI_TOOLS OFF CACHE BOOL "")
+  set(openPMD_BUILD_EXAMPLES OFF CACHE BOOL "")
+  set(openPMD_BUILD_TESTING OFF CACHE BOOL "")
+  set(openPMD_USE_PYTHON OFF CACHE BOOL "")
+  set(openPMD_USE_MPI ON CACHE STRING "")
+  set(openPMD_USE_HDF5 ON CACHE STRING "")
+  set(openPMD_USE_ADIOS2 ON CACHE STRING "")
+  set(openPMD_INSTALL OFF CACHE BOOL "")
+  
+  FetchContent_Declare(
+    openPMD
+    GIT_REPOSITORY https://github.com/openPMD/openPMD-api.git
+    GIT_TAG 0.17.1
+  )
 
-    FetchContent_MakeAvailable(openPMD)
+  FetchContent_MakeAvailable(openPMD)
+endif()
 
 
 # ------------------------------------------------------------------------------
