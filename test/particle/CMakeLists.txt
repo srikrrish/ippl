@@ -52,3 +52,8 @@ add_ippl_integration_test(
   10
   --info
   10)
+
+
+add_executable(TestScatterOpenPMD TestScatterOpenPMD.cpp)
+target_link_libraries(TestScatterOpenPMD PRIVATE IPPL::ippl openPMD::openPMD)
+target_include_directories(TestScatterOpenPMD PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

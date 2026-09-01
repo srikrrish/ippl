@@ -113,6 +113,10 @@ if(IPPL_ENABLE_FINUFFT)
   target_link_libraries(ippl PUBLIC ${IPPL_FINUFFT_TARGETS})
 endif()
 
+if(IPPL_ENABLE_OPENPMD)
+    target_link_libraries(ippl PUBLIC openPMD::openPMD)
+endif()
+
 # this alias should be created after all target properties have been set
 add_library(IPPL::ippl ALIAS ippl)
 

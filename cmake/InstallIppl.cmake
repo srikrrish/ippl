@@ -130,3 +130,7 @@ foreach(_ippl_extern_dep IN ITEMS finufft finufft_common cufinufft)
     install(TARGETS ${_ippl_extern_dep} EXPORT ipplTargets DESTINATION lib)
   endif()
 endforeach()
+
+if(TARGET openPMD)
+    install(TARGETS openPMD EXPORT ipplTargets DESTINATION lib)
+endif()
