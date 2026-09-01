@@ -163,7 +163,7 @@ int main(int argc, char* argv[]) {
         particles["weighting"].resetDataset(particle_dataset);
 
         std::size_t offset = 0;
-        MPI_Exscan(&localNum,&particle_offset,1,MPI_UNSIGNED_LONG_LONG,MPI_SUM,ippl::Comm->getCommunicator());
+        MPI_Exscan(&localNum,&offset,1,MPI_UNSIGNED_LONG_LONG,MPI_SUM,ippl::Comm->getCommunicator());
         
         if (rank == 0)
             offset = 0;
