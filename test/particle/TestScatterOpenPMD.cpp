@@ -24,7 +24,7 @@ int main(int argc, char* argv[]) {
         typedef Bunch<playout_type> bunch_type;
         using Centering_t = Mesh_t::DefaultCentering;
 
-        int pt = 512;
+        int pt = 128;
         ippl::Index I(pt);
         ippl::NDIndex<3> owned(I, I, I);
 
@@ -51,7 +51,7 @@ int main(int argc, char* argv[]) {
         bunch.setParticleBC(ippl::BC::PERIODIC);
 
         int nRanks              = ippl::Comm->size();
-        unsigned int nParticles = std::pow(256, 3);
+        unsigned int nParticles = std::pow(128, 3);
 
         if (nParticles % nRanks > 0) {
             if (ippl::Comm->rank() == 0) {
@@ -142,8 +142,8 @@ int main(int argc, char* argv[]) {
         HostParticleView_t Rx("Rx", localNum);
         HostParticleView_t Ry("Ry", localNum);
         HostParticleView_t Rz("Rz", localNum);
+        using HostExecSpace = Kokkos::DefaultHostExecutionSpace;
         if (localNum > 0) {
-            using HostExecSpace = Kokkos::DefaultHostExecutionSpace;
             Kokkos::RangePolicy<HostExecSpace> host_policy(0, localNum);
             Kokkos::parallel_for("AoS to SoA", host_policy, KOKKOS_LAMBDA(const int64_t i) {
                 Rx(i) = R_hostMirror(i)[0];
@@ -250,31 +250,46 @@ int main(int argc, char* argv[]) {
                 typename FieldView::data_type,
                 Kokkos::LayoutLeft,
                 Kokkos::HostSpace>;
+
+        auto rho_host_full = Kokkos::create_mirror_view(fullView);
+        Kokkos::deep_copy(rho_host_full, fullView);
         
         HostView rho_host(
             "rho_host",
             nx, ny, nz);
         
-        auto r0 = Kokkos::make_pair(
-            nGhost,
-            nGhost + nx);
+        //auto r0 = Kokkos::make_pair(
+        //    nGhost,
+        //    nGhost + nx);
+        //
+        //auto r1 = Kokkos::make_pair(
+        //    nGhost,
+        //    nGhost + ny);
+        //
+        //auto r2 = Kokkos::make_pair(
+        //    nGhost,
+        //    nGhost + nz);
+        //
+        //auto rho_subview =
+        //    Kokkos::subview(
+        //        fullView,
+        //        r0, r1, r2);
+        //
+        //Kokkos::deep_copy(
+        //    rho_host,
+        //    rho_subview);
         
-        auto r1 = Kokkos::make_pair(
-            nGhost,
-            nGhost + ny);
-        
-        auto r2 = Kokkos::make_pair(
-            nGhost,
-            nGhost + nz);
-        
-        auto rho_subview =
-            Kokkos::subview(
-                fullView,
-                r0, r1, r2);
-        
-        Kokkos::deep_copy(
-            rho_host,
-            rho_subview);
+        // host → host copy, potentially doing the layout conversion
+
+        Kokkos::parallel_for("extract_rho",
+            Kokkos::MDRangePolicy<HostExecSpace,Kokkos::Rank<3>>(
+            {0, 0, 0}, {nx, ny, nz}),
+            KOKKOS_LAMBDA(int i, int j, int k) {
+                rho_host(i, j, k) =
+                    rho_host_full(i + nGhost,
+                                  j + nGhost,
+                                  k + nGhost);
+            });
         
         // ------------------------------------------------------------
         // Global mesh dataset
