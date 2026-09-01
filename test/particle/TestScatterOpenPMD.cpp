@@ -171,22 +171,22 @@ int main(int argc, char* argv[]) {
         Offset particle_offset = {static_cast<std::size_t>(offset)};
         Extent particle_extent = {static_cast<std::size_t>(localNum)};
 
-        particles["position"]["x"].storeChunk(
+        particles["position"]["x"].storeChunkRaw(
             Rx.data(),
             particle_offset,
             particle_extent);
 
-        particles["position"]["y"].storeChunk(
+        particles["position"]["y"].storeChunkRaw(
             Ry.data(),
             particle_offset,
             particle_extent);
 
-        particles["position"]["z"].storeChunk(
+        particles["position"]["z"].storeChunkRaw(
             Rz.data(),
             particle_offset,
             particle_extent);
 
-        particles["weighting"].storeChunk(
+        particles["weighting"].storeChunkRaw(
             Q_hostMirror.data(),
             particle_offset,
             particle_extent);
@@ -199,8 +199,8 @@ int main(int argc, char* argv[]) {
         rho.setGeometry(openPMD::Mesh::Geometry::cartesian);
         rho.setDataOrder(openPMD::Mesh::DataOrder::C);
         
-        rho.setGridSpacing({dx, dx, dx});
-        rho.setGridGlobalOffset({0.0, 0.0, 0.0});
+        rho.setGridSpacing(std::vector<double>{dx, dx, dx});
+        rho.setGridGlobalOffset(std::vector<double>{0.0, 0.0, 0.0});
         
         // ------------------------------------------------------------
         // IPPL local layout
@@ -294,7 +294,7 @@ int main(int argc, char* argv[]) {
         // Write this rank's local chunk
         // ------------------------------------------------------------
         
-        rho["SCALAR"].storeChunk(
+        rho["SCALAR"].storeChunkRaw(
             rho_host.data(),
             {ox, oy, oz},
             {nx, ny, nz});
