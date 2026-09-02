@@ -194,10 +194,10 @@ int main(int argc, char* argv[]) {
             particle_offset,
             particle_extent);
 
-        particles["weighting"].storeChunkRaw(
-            Q_hostMirror.data(),
-            particle_offset,
-            particle_extent);
+        //particles["weighting"].storeChunkRaw(
+        //    Q_hostMirror.data(),
+        //    particle_offset,
+        //    particle_extent);
 
         particles["weighting"].storeChunkRaw(
             bunch.Q.getView().data(),
