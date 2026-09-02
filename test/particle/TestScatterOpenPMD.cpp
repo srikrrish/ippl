@@ -111,8 +111,12 @@ int main(int argc, char* argv[]) {
 
         using namespace openPMD;
 
+        //Series series(
+        //    "ippl_testscatter.h5",
+        //    Access::CREATE_LINEAR,
+        //    ippl::Comm->getCommunicator());
         Series series(
-            "ippl_testscatter.h5",
+            "ippl_testscatter.bp5",
             Access::CREATE_LINEAR,
             ippl::Comm->getCommunicator());
         series.setMeshesPath("fields");
@@ -195,11 +199,11 @@ int main(int argc, char* argv[]) {
             particle_offset,
             particle_extent);
 
+        //particles["weighting"].storeChunkRaw(
+        //    bunch.Q.getView().data(),
+        //    particle_offset,
+        //    particle_extent);
 
-        //openPMD::Dataset offset_dataset(
-        //    openPMD::Datatype::DOUBLE,
-        //    openPMD::Extent{nParticles}
-        //);
         
         // ============================================================
         // FIELD
