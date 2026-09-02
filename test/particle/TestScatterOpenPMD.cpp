@@ -111,14 +111,14 @@ int main(int argc, char* argv[]) {
 
         using namespace openPMD;
 
-        //Series series(
-        //    "ippl_testscatter.h5",
-        //    Access::CREATE_LINEAR,
-        //    ippl::Comm->getCommunicator());
         Series series(
-            "ippl_testscatter.bp5",
+            "ippl_testscatter.h5",
             Access::CREATE_LINEAR,
             ippl::Comm->getCommunicator());
+        //Series series(
+        //    "ippl_testscatter.bp5",
+        //    Access::CREATE_LINEAR,
+        //    ippl::Comm->getCommunicator());
         series.setMeshesPath("fields");
         series.setParticlesPath("particles");
 
@@ -135,9 +135,9 @@ int main(int argc, char* argv[]) {
         auto particles = iteration.particles["bunch"];
         typename bunch_type::particle_position_type::host_mirror_type R_hostMirror =
             bunch.R.getHostMirror();
-        typename ippl::ParticleAttrib<double>::host_mirror_type Q_hostMirror = bunch.Q.getHostMirror();
+        //typename ippl::ParticleAttrib<double>::host_mirror_type Q_hostMirror = bunch.Q.getHostMirror();
         Kokkos::deep_copy(R_hostMirror, bunch.R.getView());
-        Kokkos::deep_copy(Q_hostMirror, bunch.Q.getView());
+        //Kokkos::deep_copy(Q_hostMirror, bunch.Q.getView());
 
         const size_t localNum = bunch.getLocalNum();
         const int rank = ippl::Comm->rank();
@@ -199,10 +199,10 @@ int main(int argc, char* argv[]) {
             particle_offset,
             particle_extent);
 
-        //particles["weighting"].storeChunkRaw(
-        //    bunch.Q.getView().data(),
-        //    particle_offset,
-        //    particle_extent);
+        particles["weighting"].storeChunkRaw(
+            bunch.Q.getView().data(),
+            particle_offset,
+            particle_extent);
 
         
         // ============================================================
