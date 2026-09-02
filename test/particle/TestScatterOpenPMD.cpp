@@ -156,11 +156,15 @@ int main(int argc, char* argv[]) {
         // ------------------------------------------------------------
 
         Dataset particle_dataset(determineDatatype<double>(),{static_cast<std::size_t>(nParticles)});
+        auto positionOffset = particles["positionOffset"];
 
         particles["position"]["x"].resetDataset(particle_dataset);
         particles["position"]["y"].resetDataset(particle_dataset);
         particles["position"]["z"].resetDataset(particle_dataset);
         particles["weighting"].resetDataset(particle_dataset);
+        positionOffset["x"].resetDataset(particle_dataset).makeConstant(0.0);
+        positionOffset["y"].resetDataset(particle_dataset).makeConstant(0.0);
+        positionOffset["z"].resetDataset(particle_dataset).makeConstant(0.0);
 
         std::size_t offset = 0;
         MPI_Exscan(&localNum,&offset,1,MPI_UNSIGNED_LONG_LONG,MPI_SUM,ippl::Comm->getCommunicator());
@@ -190,6 +194,13 @@ int main(int argc, char* argv[]) {
             Q_hostMirror.data(),
             particle_offset,
             particle_extent);
+
+
+        //openPMD::Dataset offset_dataset(
+        //    openPMD::Datatype::DOUBLE,
+        //    openPMD::Extent{nParticles}
+        //);
+        
         // ============================================================
         // FIELD
         // ============================================================
@@ -248,7 +259,7 @@ int main(int argc, char* argv[]) {
         using HostView =
             Kokkos::View<
                 typename FieldView::data_type,
-                Kokkos::LayoutLeft,
+                Kokkos::LayoutRight,
                 Kokkos::HostSpace>;
 
         auto rho_host_full = Kokkos::create_mirror_view(fullView);
