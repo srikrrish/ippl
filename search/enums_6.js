@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['outputtype_0',['OutputType',['../classippl_1_1Poisson.html#a46f42979d7cf8518784fd655229ef1ee',1,'ippl::Poisson']]]
+  ['initialguesstype_0',['InitialGuessType',['../namespaceippl_1_1nodes1d.html#a1e96861fc28b05d5cdd9a68fe279f6a1',1,'ippl::nodes1d']]]
 ];

@@ -87,18 +87,22 @@ $(function() {
   <div class="headertitle"><div class="title">IpplExpressions.h File Reference</div></div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><code>#include &lt;type_traits&gt;</code><br />
+<div class="textblock"><code>#include &lt;Kokkos_Macros.hpp&gt;</code><br />
+<code>#include &lt;cstdlib&gt;</code><br />
+<code>#include &lt;type_traits&gt;</code><br />
 <code>#include &quot;<a class="el" href="IpplOperations_8h_source.html">Expression/IpplOperations.h</a>&quot;</code><br />
 </div><div class="textblock"><div class="dynheader">
 Include dependency graph for IpplExpressions.h:</div>
 <div class="dyncontent">
 <div class="center"><img src="IpplExpressions_8h__incl.png" border="0" usemap="#aIpplExpressions_8h" alt=""/></div>
 <map name="aIpplExpressions_8h" id="aIpplExpressions_8h">
-<area shape="rect" title=" " alt="" coords="64,5,187,31"/>
-<area shape="rect" title=" " alt="" coords="5,79,88,104"/>
-<area shape="rect" href="IpplOperations_8h.html" title=" " alt="" coords="113,79,295,104"/>
-<area shape="rect" title=" " alt="" coords="5,152,237,177"/>
-<area shape="rect" title=" " alt="" coords="261,152,312,177"/>
+<area shape="rect" title=" " alt="" coords="186,5,309,31"/>
+<area shape="rect" title=" " alt="" coords="5,79,145,104"/>
+<area shape="rect" title=" " alt="" coords="169,79,229,104"/>
+<area shape="rect" title=" " alt="" coords="254,79,337,104"/>
+<area shape="rect" href="IpplOperations_8h.html" title=" " alt="" coords="361,79,544,104"/>
+<area shape="rect" title=" " alt="" coords="254,152,486,177"/>
+<area shape="rect" title=" " alt="" coords="510,152,561,177"/>
 </map>
 </div>
 </div><div class="textblock"><div class="dynheader">
@@ -106,56 +110,56 @@ This graph shows which files directly or indirectly include this file:</div>
 <div class="dyncontent">
 <div class="center"><img src="IpplExpressions_8h__dep__incl.png" border="0" usemap="#aIpplExpressions_8hdep" alt=""/></div>
 <map name="aIpplExpressions_8hdep" id="aIpplExpressions_8hdep">
-<area shape="rect" title=" " alt="" coords="1463,5,1586,31"/>
-<area shape="rect" href="BareField_8h.html" title=" " alt="" coords="641,372,728,397"/>
-<area shape="rect" href="ParticleAttrib_8h.html" title=" " alt="" coords="2763,299,2870,324"/>
-<area shape="rect" href="Vector_8h.html" title=" " alt="" coords="1489,79,1560,104"/>
-<area shape="rect" href="FFT_8hpp.html" title=" " alt="" coords="327,812,397,837"/>
-<area shape="rect" href="Field_8h.html" title=" " alt="" coords="301,445,361,471"/>
-<area shape="rect" href="IpplCore_8h.html" title=" " alt="" coords="1330,519,1410,544"/>
-<area shape="rect" href="UniformCartesian_8hpp.html" title=" " alt="" coords="419,519,566,544"/>
-<area shape="rect" href="FFT_8h.html" title=" " alt="" coords="453,885,509,911"/>
-<area shape="rect" href="FFTOpenPoissonSolver_8h.html" title=" " alt="" coords="922,959,1093,984"/>
-<area shape="rect" href="FFTPeriodicPoissonSolver_8h.html" title=" " alt="" coords="711,959,898,984"/>
-<area shape="rect" href="P3MSolver_8h.html" title=" " alt="" coords="591,959,687,984"/>
-<area shape="rect" href="ChargedParticles_8hpp.html" title=" " alt="" coords="775,1032,920,1057"/>
-<area shape="rect" href="FieldSolverBase_8h.html" title=" " alt="" coords="944,1032,1071,1057"/>
-<area shape="rect" href="datatypes_8h.html" title=" " alt="" coords="662,1032,750,1057"/>
-<area shape="rect" href="PicManager_8h.html" title=" " alt="" coords="1313,1105,1414,1131"/>
-<area shape="rect" href="BumponTailInstability_8cpp.html" title=" " alt="" coords="1126,1179,1297,1204"/>
-<area shape="rect" href="LandauDamping_8cpp.html" title=" " alt="" coords="1321,1179,1461,1204"/>
-<area shape="rect" href="Maxwell_8h.html" title=" " alt="" coords="473,812,552,837"/>
-<area shape="rect" href="Poisson_8h.html" title=" " alt="" coords="12,885,91,911"/>
-<area shape="rect" href="Ippl_8h.html" title=" " alt="" coords="2003,592,2057,617"/>
-<area shape="rect" href="BareField_8hpp.html" title=" " alt="" coords="1451,665,1553,691"/>
-<area shape="rect" href="BaseManager_8h.html" title=" " alt="" coords="2454,959,2566,984"/>
-<area shape="rect" href="Buffers_8cpp.html" title=" " alt="" coords="1728,665,1815,691"/>
-<area shape="rect" href="Communicate_8cpp.html" title=" " alt="" coords="1577,665,1704,691"/>
-<area shape="rect" href="Environment_8cpp.html" title=" " alt="" coords="2079,665,2197,691"/>
-<area shape="rect" href="FieldLayout_8hpp.html" title=" " alt="" coords="1839,665,1952,691"/>
-<area shape="rect" href="Inform_8cpp.html" title=" " alt="" coords="2222,665,2305,691"/>
-<area shape="rect" href="Ippl_8cpp.html" title=" " alt="" coords="2329,665,2395,691"/>
-<area shape="rect" href="IpplInfo_8cpp.html" title=" " alt="" coords="2420,665,2509,691"/>
-<area shape="rect" href="IpplTimings_8cpp.html" title=" " alt="" coords="2533,665,2647,691"/>
-<area shape="rect" href="FieldLayout_8h.html" title=" " alt="" coords="1013,739,1111,764"/>
-<area shape="rect" href="BcTypes_8h.html" title=" " alt="" coords="841,812,923,837"/>
-<area shape="rect" href="HaloCells_8h.html" title=" " alt="" coords="729,812,817,837"/>
-<area shape="rect" href="OrthogonalRecursiveBisection_8h.html" title=" " alt="" coords="1260,885,1467,911"/>
-<area shape="rect" href="ParticleSpatialLayout_8h.html" title=" " alt="" coords="1401,812,1555,837"/>
-<area shape="rect" href="NullSolver_8h.html" title=" " alt="" coords="5,959,97,984"/>
-<area shape="rect" href="PoissonCG_8h.html" title=" " alt="" coords="469,959,567,984"/>
-<area shape="rect" href="UniformCartesian_8h.html" title=" " alt="" coords="369,739,502,764"/>
-<area shape="rect" href="ParticleLayout_8h.html" title=" " alt="" coords="2729,372,2843,397"/>
-<area shape="rect" href="ParticleBase_8h.html" title=" " alt="" coords="2631,445,2738,471"/>
-<area shape="rect" href="Archive_8h.html" title=" " alt="" coords="1445,152,1521,177"/>
-<area shape="rect" href="Mesh_8h.html" title=" " alt="" coords="770,152,834,177"/>
-<area shape="rect" href="NDIndex_8h.html" title=" " alt="" coords="819,592,902,617"/>
-<area shape="rect" href="ParallelDispatch_8h.html" title=" " alt="" coords="1940,299,2067,324"/>
-<area shape="rect" href="Archive_8hpp.html" title=" " alt="" coords="1438,225,1529,251"/>
-<area shape="rect" href="Communicate_8h.html" title=" " alt="" coords="1386,299,1498,324"/>
-<area shape="rect" href="Communicator_8h.html" title=" " alt="" coords="1617,519,1733,544"/>
-<area shape="rect" href="ParticleAttribBase_8h.html" title=" " alt="" coords="1779,225,1916,251"/>
-<area shape="rect" href="Partitioner_8h.html" title=" " alt="" coords="982,665,1073,691"/>
+<area shape="rect" title=" " alt="" coords="1788,5,1911,31"/>
+<area shape="rect" href="BareField_8h.html" title=" " alt="" coords="1951,299,2038,324"/>
+<area shape="rect" href="ParticleAttrib_8h.html" title=" " alt="" coords="841,79,948,104"/>
+<area shape="rect" href="Vector_8h.html" title=" " alt="" coords="2005,152,2075,177"/>
+<area shape="rect" href="BareField_8hpp.html" title=" " alt="" coords="1744,372,1845,397"/>
+<area shape="rect" href="BareFieldOperations_8hpp.html" title=" " alt="" coords="431,673,595,698"/>
+<area shape="rect" href="Field_8h.html" title=" " alt="" coords="2062,372,2122,397"/>
+<area shape="rect" href="IpplCore_8h.html" title=" " alt="" coords="743,445,823,471"/>
+<area shape="rect" href="UniformCartesian_8hpp.html" title=" " alt="" coords="2129,445,2276,471"/>
+<area shape="rect" href="Heffte_8h.html" title=" " alt="" coords="1869,372,1936,397"/>
+<area shape="rect" href="AbsorbingBC_8h.html" title=" " alt="" coords="1882,592,1990,617"/>
+<area shape="rect" href="AutoTune_8cpp.html" title="Width&#45;2 (CIC) scatter / gather auto&#45;tuner implementation." alt="" coords="1047,592,1150,617"/>
+<area shape="rect" href="FFTOpenPoissonSolver_8h.html" title=" " alt="" coords="2651,592,2821,617"/>
+<area shape="rect" href="FFTTruncatedGreenPeriodicPoissonSolver_8h.html" title=" " alt="" coords="2448,665,2635,705"/>
+<area shape="rect" href="Maxwell_8h.html" title=" " alt="" coords="2066,592,2145,617"/>
+<area shape="rect" href="NativeNUFFT_8h.html" title=" " alt="" coords="1183,445,1297,471"/>
+<area shape="rect" href="Poisson_8h.html" title=" " alt="" coords="2449,519,2527,544"/>
+<area shape="rect" href="FDTDSolverBase_8h.html" title=" " alt="" coords="1880,673,2013,698"/>
+<area shape="rect" href="NonStandardFDTDSolver_8h.html" title="Defines the NonStandardFDTDSolver class for solving Maxwell&#39;s equations using a non&#45;standard Finite&#45;D..." alt="" coords="1805,753,1984,779"/>
+<area shape="rect" href="StandardFDTDSolver_8h.html" title="Defines the StandardFDTDSolver class for solving Maxwell&#39;s equations using the FDTD method." alt="" coords="2151,753,2305,779"/>
+<area shape="rect" href="Ippl_8h.html" title=" " alt="" coords="719,519,772,544"/>
+<area shape="rect" href="Multigrid_8h.html" title=" " alt="" coords="2545,592,2626,617"/>
+<area shape="rect" href="ParallelDispatch_8h.html" title=" " alt="" coords="618,592,745,617"/>
+<area shape="rect" href="NUFFT_8h.html" title="Non&#45;uniform FFT specialization (NUFFTransform tag)." alt="" coords="1202,519,1278,544"/>
+<area shape="rect" href="UniformCartesian_8h.html" title=" " alt="" coords="2184,519,2317,544"/>
+<area shape="rect" href="Backend_8h.html" title="Aggregate include for all FFT backends supported by IPPL." alt="" coords="1719,445,1801,471"/>
+<area shape="rect" href="Gather_8h.html" title="Public Gather facade dispatching to AtomicGather (sorted/unsorted)." alt="" coords="1026,372,1097,397"/>
+<area shape="rect" href="OrthogonalRecursiveBisection_8h.html" title=" " alt="" coords="501,372,707,397"/>
+<area shape="rect" href="ParticleLayout_8h.html" title=" " alt="" coords="571,152,685,177"/>
+<area shape="rect" href="Scatter_8h.html" title="Public Scatter facade dispatching to atomic / tiled / output&#45;tile&#45;parallel backends based on the runt..." alt="" coords="1121,372,1196,397"/>
+<area shape="rect" href="PicManager_8h.html" title=" " alt="" coords="553,445,655,471"/>
+<area shape="rect" href="Binning_8h.html" title="Particle&#45;to&#45;tile binning for tiled scatter / gather." alt="" coords="1121,299,1196,324"/>
+<area shape="rect" href="ParticleBase_8h.html" title=" " alt="" coords="435,225,541,251"/>
+<area shape="rect" href="ParticleSpatialLayout_8h.html" title=" " alt="" coords="551,299,705,324"/>
+<area shape="rect" href="ParticleSpatialOverlapLayout_8h.html" title=" " alt="" coords="23,299,223,324"/>
+<area shape="rect" href="AffineMap_8h.html" title="Affine maps for 1D quadrature nodes and weights between intervals." alt="" coords="1466,225,1555,251"/>
+<area shape="rect" href="Quadrature_8h.html" title=" " alt="" coords="1644,299,1740,324"/>
+<area shape="rect" href="Archive_8h.html" title=" " alt="" coords="2757,225,2833,251"/>
+<area shape="rect" href="FieldBufferOps_8hpp.html" title=" " alt="" coords="2706,299,2838,324"/>
+<area shape="rect" href="CoordinateTransform_8h.html" title=" " alt="" coords="1186,225,1339,251"/>
+<area shape="rect" href="Element_8h.html" title=" " alt="" coords="1631,225,1710,251"/>
+<area shape="rect" href="GatherArgumentsBase_8h.html" title="Common type bundle and shared argument struct for gather functors." alt="" coords="933,299,1097,324"/>
+<area shape="rect" href="GatherConfig_8h.html" title="User&#45;facing configuration knobs for gather operations and the density&#45;aware GatherCache singleton." alt="" coords="1513,299,1620,324"/>
+<area shape="rect" href="Mesh_8h.html" title=" " alt="" coords="2553,445,2617,471"/>
+<area shape="rect" href="NDIndex_8h.html" title=" " alt="" coords="2447,225,2529,251"/>
+<area shape="rect" href="Nodes1DDetail_8hpp.html" title="Internal helpers for Nodes1D (not part of the public API)." alt="" coords="1887,225,2020,251"/>
+<area shape="rect" href="RefShapeFunctionData_8h.html" title=" " alt="" coords="2045,225,2211,251"/>
+<area shape="rect" href="ScatterArgumentsBase_8h.html" title="Common type bundle and shared argument struct for scatter functors." alt="" coords="1322,299,1489,324"/>
+<area shape="rect" href="ScatterConfig_8h.html" title="User&#45;facing configuration knobs for scatter operations." alt="" coords="1765,299,1875,324"/>
+<area shape="rect" href="Vector_8hpp.html" title=" " alt="" coords="2338,225,2422,251"/>
 </map>
 </div>
 </div>

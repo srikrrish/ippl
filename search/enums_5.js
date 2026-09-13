@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['locktype_0',['LockType',['../classippl_1_1mpi_1_1rma_1_1Window.html#ad51963c9de49f39912dd08d5368d60ba',1,'ippl::mpi::rma::Window']]]
+  ['gathermethod_0',['GatherMethod',['../namespaceippl_1_1Interpolation.html#a3fcb15a98f0a4e0d205d57645c809c8a',1,'ippl::Interpolation']]],
+  ['greenfunction_1',['GreenFunction',['../classippl_1_1FFTOpenPoissonSolver.html#aef4d0197af3ef8a26c8a2c2a5ee769fb',1,'ippl::FFTOpenPoissonSolver']]]
 ];

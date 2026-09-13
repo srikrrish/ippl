@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['sendorder_0',['SendOrder',['../classippl_1_1detail_1_1HaloCells.html#a608d4b766782192817f1f0a19b6d98ff',1,'ippl::detail::HaloCells']]]
+  ['locktype_0',['LockType',['../classippl_1_1mpi_1_1rma_1_1Window.html#ad51963c9de49f39912dd08d5368d60ba',1,'ippl::mpi::rma::Window']]]
 ];

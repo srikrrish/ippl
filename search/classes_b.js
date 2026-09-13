@@ -2,9 +2,9 @@ var searchData=
 [
   ['max_0',['Max',['../structKokkosCorrection_1_1Max.html',1,'KokkosCorrection']]],
   ['maxwell_1',['Maxwell',['../classippl_1_1Maxwell.html',1,'ippl']]],
-  ['mesh_2',['Mesh',['../classippl_1_1Mesh.html',1,'ippl']]],
-  ['mesh_3c_202_2c_20dim_20_3e_3',['Mesh&lt; 2, Dim &gt;',['../classippl_1_1Mesh.html',1,'ippl']]],
-  ['mesh_3c_203_2c_20dim_20_3e_4',['Mesh&lt; 3, Dim &gt;',['../classippl_1_1Mesh.html',1,'ippl']]],
+  ['maxwell_3c_20fieldtype_2c_20fieldtype_20_3e_2',['Maxwell&lt; FieldType, FieldType &gt;',['../classippl_1_1Maxwell.html',1,'ippl']]],
+  ['mesh_3',['Mesh',['../classippl_1_1Mesh.html',1,'ippl']]],
+  ['mesh_3c_20tlhs_2c_20dim_20_3e_4',['Mesh&lt; Tlhs, Dim &gt;',['../classippl_1_1Mesh.html',1,'ippl']]],
   ['meta_5fcross_5',['meta_cross',['../structippl_1_1detail_1_1meta__cross.html',1,'ippl::detail']]],
   ['meta_5fcurl_6',['meta_curl',['../structippl_1_1detail_1_1meta__curl.html',1,'ippl::detail']]],
   ['meta_5fdiv_7',['meta_div',['../structippl_1_1detail_1_1meta__div.html',1,'ippl::detail']]],
@@ -16,7 +16,11 @@ var searchData=
   ['meta_5fpoisson_13',['meta_poisson',['../structippl_1_1detail_1_1meta__poisson.html',1,'ippl::detail']]],
   ['meta_5fupper_5fand_5flower_5flaplace_14',['meta_upper_and_lower_laplace',['../structippl_1_1detail_1_1meta__upper__and__lower__laplace.html',1,'ippl::detail']]],
   ['meta_5fupper_5flaplace_15',['meta_upper_laplace',['../structippl_1_1detail_1_1meta__upper__laplace.html',1,'ippl::detail']]],
-  ['min_16',['Min',['../structKokkosCorrection_1_1Min.html',1,'KokkosCorrection']]],
-  ['multispacecontainer_17',['MultispaceContainer',['../classippl_1_1detail_1_1MultispaceContainer.html',1,'ippl::detail']]],
-  ['my_5fauto_5fptr_18',['my_auto_ptr',['../classmy__auto__ptr.html',1,'']]]
+  ['midpointquadrature_16',['MidpointQuadrature',['../classippl_1_1MidpointQuadrature.html',1,'ippl']]],
+  ['min_17',['Min',['../structKokkosCorrection_1_1Min.html',1,'KokkosCorrection']]],
+  ['mkl_18',['MKL',['../structippl_1_1fft_1_1MKL.html',1,'ippl::fft']]],
+  ['multigrid_5fpreconditioner_19',['multigrid_preconditioner',['../structippl_1_1multigrid__preconditioner.html',1,'ippl']]],
+  ['multispacecontainer_20',['MultispaceContainer',['../classippl_1_1detail_1_1MultispaceContainer.html',1,'ippl::detail']]],
+  ['multiviewbuffer_21',['MultiViewBuffer',['../classippl_1_1MultiViewBuffer.html',1,'ippl']]],
+  ['my_5fauto_5fptr_22',['my_auto_ptr',['../classmy__auto__ptr.html',1,'']]]
 ];

@@ -93,61 +93,63 @@ $(function() {
 <code>#include &lt;cstring&gt;</code><br />
 <code>#include &lt;list&gt;</code><br />
 <code>#include &quot;<a class="el" href="IpplInfo_8h_source.html">Utility/IpplInfo.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="AutoTune_8h_source.html">Interpolation/Scatter/AutoTune.h</a>&quot;</code><br />
+<code>#include &quot;<a class="el" href="SortBuffer_8h_source.html">Particle/SortBuffer.h</a>&quot;</code><br />
 </div><div class="textblock"><div class="dynheader">
 Include dependency graph for Ippl.cpp:</div>
 <div class="dyncontent">
 <div class="center"><img src="Ippl_8cpp__incl.png" border="0" usemap="#aIppl_8cpp" alt=""/></div>
 <map name="aIppl_8cpp" id="aIppl_8cpp">
-<area shape="rect" title=" " alt="" coords="2928,5,2995,31"/>
-<area shape="rect" title=" " alt="" coords="1747,695,1871,720"/>
-<area shape="rect" href="Ippl_8h.html" title=" " alt="" coords="2571,79,2624,104"/>
-<area shape="rect" title=" " alt="" coords="2686,548,2746,573"/>
-<area shape="rect" title=" " alt="" coords="2685,695,2747,720"/>
-<area shape="rect" href="IpplInfo_8h.html" title=" " alt="" coords="2736,401,2848,427"/>
-<area shape="rect" title=" " alt="" coords="3126,79,3165,104"/>
-<area shape="rect" title=" " alt="" coords="2763,768,2835,793"/>
-<area shape="rect" href="IpplTypes_8h.html" title=" " alt="" coords="2442,621,2569,647"/>
-<area shape="rect" href="Inform_8h.html" title=" " alt="" coords="2973,695,3080,720"/>
-<area shape="rect" href="ParallelDispatch_8h.html" title=" " alt="" coords="1620,548,1783,573"/>
-<area shape="rect" href="Communicator_8h.html" title=" " alt="" coords="1224,475,1424,500"/>
-<area shape="rect" href="Environment_8h.html" title=" " alt="" coords="1425,152,1613,177"/>
-<area shape="rect" href="IpplCore_8h.html" title=" " alt="" coords="2309,152,2389,177"/>
-<area shape="rect" title=" " alt="" coords="2381,695,2446,720"/>
-<area shape="rect" title=" " alt="" coords="2873,768,2940,793"/>
-<area shape="rect" title=" " alt="" coords="2992,768,3061,793"/>
-<area shape="rect" title=" " alt="" coords="1671,621,1721,647"/>
-<area shape="rect" href="Vector_8h.html" title=" " alt="" coords="2193,621,2303,647"/>
-<area shape="rect" href="IpplException_8h.html" title=" " alt="" coords="1297,695,1444,720"/>
-<area shape="rect" title=" " alt="" coords="2152,695,2248,720"/>
-<area shape="rect" href="IpplExpressions_8h.html" title=" " alt="" coords="2470,695,2661,720"/>
-<area shape="rect" href="Vector_8hpp.html" title=" " alt="" coords="2273,695,2357,720"/>
-<area shape="rect" title=" " alt="" coords="1343,768,1398,793"/>
-<area shape="rect" title=" " alt="" coords="2542,548,2610,573"/>
-<area shape="rect" title=" " alt="" coords="156,695,209,720"/>
-<area shape="rect" href="Request_8h.html" title=" " alt="" coords="651,548,815,573"/>
-<area shape="rect" href="Status_8h.html" title=" " alt="" coords="749,621,904,647"/>
-<area shape="rect" title=" " alt="" coords="1434,548,1494,573"/>
-<area shape="rect" href="TypeUtils_8h.html" title=" " alt="" coords="1858,548,1982,573"/>
-<area shape="rect" href="Archive_8h.html" title=" " alt="" coords="2205,548,2365,573"/>
-<area shape="rect" href="TagMaker_8h.html" title=" " alt="" coords="550,621,725,647"/>
-<area shape="rect" href="Tags_8h.html" title=" " alt="" coords="839,548,985,573"/>
-<area shape="rect" href="Collectives_8hpp.html" title=" " alt="" coords="280,548,475,573"/>
-<area shape="rect" href="PointToPoint_8hpp.html" title=" " alt="" coords="1009,548,1215,573"/>
-<area shape="rect" href="Buffers_8hpp.html" title=" " alt="" coords="1239,548,1409,573"/>
-<area shape="rect" title=" " alt="" coords="793,695,860,720"/>
-<area shape="rect" href="Variant_8h.html" title=" " alt="" coords="1847,621,1959,647"/>
-<area shape="rect" href="ViewTypes_8h.html" title=" " alt="" coords="1983,621,2118,647"/>
-<area shape="rect" href="Archive_8hpp.html" title=" " alt="" coords="2327,621,2417,647"/>
-<area shape="rect" title=" " alt="" coords="489,695,535,720"/>
-<area shape="rect" href="DataTypes_8h.html" title=" " alt="" coords="296,621,475,647"/>
-<area shape="rect" href="Operations_8h.html" title=" " alt="" coords="93,621,272,647"/>
-<area shape="rect" href="BareField_8h.html" title=" " alt="" coords="2399,321,2518,346"/>
-<area shape="rect" href="FieldLayout_8h.html" title=" " alt="" coords="1815,401,1985,427"/>
-<area shape="rect" href="Field_8h.html" title=" " alt="" coords="2413,233,2505,258"/>
-<area shape="rect" href="BConds_8h.html" title=" " alt="" coords="2601,401,2711,427"/>
-<area shape="rect" href="ParticleBase_8h.html" title=" " alt="" coords="1965,475,2120,500"/>
-<area shape="rect" href="ParticleSpatialLayout_8h.html" title=" " alt="" coords="2071,313,2225,353"/>
-<area shape="rect" href="OrthogonalRecursiveBisection_8h.html" title=" " alt="" coords="2061,225,2235,265"/>
+<area shape="rect" title=" " alt="" coords="2539,5,2605,31"/>
+<area shape="rect" title=" " alt="" coords="195,651,319,676"/>
+<area shape="rect" href="Ippl_8h.html" title=" " alt="" coords="1763,79,1816,104"/>
+<area shape="rect" title=" " alt="" coords="1127,871,1187,896"/>
+<area shape="rect" href="IpplInfo_8h.html" title=" " alt="" coords="1640,247,1752,273"/>
+<area shape="rect" title=" " alt="" coords="2576,79,2637,104"/>
+<area shape="rect" title=" " alt="" coords="2662,79,2701,104"/>
+<area shape="rect" href="AutoTune_8h.html" title=" " alt="" coords="43,152,181,192"/>
+<area shape="rect" href="SortBuffer_8h.html" title=" " alt="" coords="2720,570,2859,595"/>
+<area shape="rect" title=" " alt="" coords="1692,489,1764,515"/>
+<area shape="rect" href="IpplTypes_8h.html" title=" " alt="" coords="515,797,642,823"/>
+<area shape="rect" href="Inform_8h.html" title=" " alt="" coords="1767,416,1873,441"/>
+<area shape="rect" href="Communicator_8h.html" title=" " alt="" coords="1356,489,1556,515"/>
+<area shape="rect" href="Environment_8h.html" title=" " alt="" coords="2167,159,2355,185"/>
+<area shape="rect" href="ParallelDispatch_8h.html" title=" " alt="" coords="200,416,363,441"/>
+<area shape="rect" href="IpplCore_8h.html" title=" " alt="" coords="979,159,1059,185"/>
+<area shape="rect" title=" " alt="" coords="546,871,611,896"/>
+<area shape="rect" title=" " alt="" coords="1881,489,1948,515"/>
+<area shape="rect" title=" " alt="" coords="1788,489,1857,515"/>
+<area shape="rect" title=" " alt="" coords="986,724,1054,749"/>
+<area shape="rect" title=" " alt="" coords="1344,724,1397,749"/>
+<area shape="rect" href="BufferHandler_8h.html" title=" " alt="" coords="923,651,1117,676"/>
+<area shape="rect" href="Archive_8h.html" title=" " alt="" coords="684,724,844,749"/>
+<area shape="rect" href="LoggingBufferHandler_8h.html" title=" " alt="" coords="869,563,1056,603"/>
+<area shape="rect" href="Request_8h.html" title=" " alt="" coords="1131,570,1295,595"/>
+<area shape="rect" href="Status_8h.html" title=" " alt="" coords="1141,651,1296,676"/>
+<area shape="rect" title=" " alt="" coords="1473,570,1533,595"/>
+<area shape="rect" href="TypeUtils_8h.html" title=" " alt="" coords="417,570,541,595"/>
+<area shape="rect" href="TagMaker_8h.html" title=" " alt="" coords="1557,570,1731,595"/>
+<area shape="rect" href="Tags_8h.html" title=" " alt="" coords="1755,570,1901,595"/>
+<area shape="rect" href="Collectives_8hpp.html" title=" " alt="" coords="1925,570,2120,595"/>
+<area shape="rect" href="PointToPoint_8hpp.html" title=" " alt="" coords="2144,570,2349,595"/>
+<area shape="rect" href="Buffers_8hpp.html" title=" " alt="" coords="2373,570,2544,595"/>
+<area shape="rect" href="Vector_8h.html" title=" " alt="" coords="217,797,327,823"/>
+<area shape="rect" title=" " alt="" coords="441,724,495,749"/>
+<area shape="rect" href="IpplException_8h.html" title=" " alt="" coords="395,651,541,676"/>
+<area shape="rect" title=" " alt="" coords="349,489,400,515"/>
+<area shape="rect" href="BareField_8h.html" title=" " alt="" coords="718,335,837,361"/>
+<area shape="rect" href="FieldLayout_8h.html" title=" " alt="" coords="768,416,939,441"/>
+<area shape="rect" href="Field_8h.html" title=" " alt="" coords="683,247,775,273"/>
+<area shape="rect" href="BConds_8h.html" title=" " alt="" coords="1593,335,1703,361"/>
+<area shape="rect" href="SubFieldLayout_8h.html" title=" " alt="" coords="1375,335,1569,361"/>
+<area shape="rect" href="ParticleBase_8h.html" title=" " alt="" coords="387,416,541,441"/>
+<area shape="rect" href="ParticleSpatialLayout_8h.html" title=" " alt="" coords="437,328,592,368"/>
+<area shape="rect" href="OrthogonalRecursiveBisection_8h.html" title=" " alt="" coords="433,240,607,280"/>
+<area shape="rect" href="EdgeElement_8h.html" title=" " alt="" coords="800,247,997,273"/>
+<area shape="rect" href="HexahedralElement_8h.html" title=" " alt="" coords="1022,247,1255,273"/>
+<area shape="rect" href="QuadrilateralElement_8h.html" title=" " alt="" coords="1280,240,1464,280"/>
+<area shape="rect" title=" " alt="" coords="2736,651,2811,676"/>
+<area shape="rect" title=" " alt="" coords="2835,651,2896,676"/>
 </map>
 </div>
 </div><table class="memberdecls">
@@ -170,8 +172,8 @@ Functions</h2></td></tr>
 <tr class="separator:afcaedfc74d177a46298c59f98298b001"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:a86bb57a4b8f18ad70bd0a1b541c40bdf"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="namespaceippl_1_1detail.html#a86bb57a4b8f18ad70bd0a1b541c40bdf">ippl::detail::checkOption</a> (const char *arg, const char *lstr, const char *sstr)</td></tr>
 <tr class="separator:a86bb57a4b8f18ad70bd0a1b541c40bdf"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4edaccf377aaff3be0400f21229a4dc4"><td class="memTemplParams" colspan="2">template&lt;typename <a class="el" href="BumponTailInstability_8cpp.html#a6b2d038ea9c8d2651eecffe0e28b7ebb">T</a> , typename &gt; </td></tr>
-<tr class="memitem:a4edaccf377aaff3be0400f21229a4dc4"><td class="memTemplItemLeft" align="right" valign="top"><a class="el" href="BumponTailInstability_8cpp.html#a6b2d038ea9c8d2651eecffe0e28b7ebb">T</a>&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespaceippl_1_1detail.html#a4edaccf377aaff3be0400f21229a4dc4">ippl::detail::getNumericalOption</a> (const char *arg)</td></tr>
+<tr class="memitem:a4edaccf377aaff3be0400f21229a4dc4"><td class="memTemplParams" colspan="2">template&lt;typename T , typename &gt; </td></tr>
+<tr class="memitem:a4edaccf377aaff3be0400f21229a4dc4"><td class="memTemplItemLeft" align="right" valign="top">T&#160;</td><td class="memTemplItemRight" valign="bottom"><a class="el" href="namespaceippl_1_1detail.html#a4edaccf377aaff3be0400f21229a4dc4">ippl::detail::getNumericalOption</a> (const char *arg)</td></tr>
 <tr class="separator:a4edaccf377aaff3be0400f21229a4dc4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 </div><!-- contents -->
