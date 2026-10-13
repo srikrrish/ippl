@@ -501,7 +501,7 @@ if(IPPL_ENABLE_OPENPMD)
   set(openPMD_USE_PYTHON OFF CACHE BOOL "")
   set(openPMD_USE_MPI ON CACHE STRING "")
   set(openPMD_USE_HDF5 ON CACHE STRING "")
-  set(openPMD_USE_ADIOS2 ON CACHE STRING "")
+  set(openPMD_USE_ADIOS2 OFF CACHE STRING "")
   set(openPMD_INSTALL OFF CACHE BOOL "")
   
   FetchContent_Declare(
