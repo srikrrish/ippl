@@ -123,14 +123,14 @@ int main(int argc, char* argv[]) {
 
 
         IpplTimings::startTimer(IOTimer);
-        //Series series(
-        //    "ippl_testscatter_iterations.h5",
-        //    Access::CREATE_LINEAR,
-        //    ippl::Comm->getCommunicator());
         Series series(
-            "ippl_testscatter_iterations.bp5",
+            "ippl_testscatter_iterations.h5",
             Access::CREATE_LINEAR,
             ippl::Comm->getCommunicator());
+        //Series series(
+        //    "ippl_testscatter_iterations.bp5",
+        //    Access::CREATE_LINEAR,
+        //    ippl::Comm->getCommunicator());
         series.setMeshesPath("fields");
         series.setParticlesPath("particles");
 
