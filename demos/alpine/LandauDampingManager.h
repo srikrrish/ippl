@@ -151,6 +151,9 @@ public:
 
         this->grid2par();
 
+        // open the openPMD file (do this once, before the first dump)
+        this->openOpenPMD("LandauDamping_" + this->solver_m + ".h5");
+
         this->dump();
 
         m << "Done";
@@ -331,6 +334,8 @@ public:
         } else {
             dumpLandau(this->fcontainer_m->getE().getView());
         }
+        
+        this->dumpOpenPMD();
 
         IpplTimings::stopTimer(dumpDataTimer);
     }

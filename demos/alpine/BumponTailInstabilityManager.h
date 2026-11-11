@@ -188,6 +188,9 @@ public:
 
         this->grid2par();
 
+        // open the openPMD file (do this once, before the first dump)
+        this->openOpenPMD("BumponTailInstability_" + this->solver_m + ".h5");
+        
         this->dump();
 
         m << "Done";
@@ -445,6 +448,8 @@ public:
         if constexpr (EnablePhaseDump) {
             phase_m->dump(this->it_m, this->pcontainer_m);
         }
+
+        this->dumpOpenPMD();
 
         IpplTimings::stopTimer(dumpDataTimer);
     }
